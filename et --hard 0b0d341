@@ -1,0 +1,52 @@
+[33mcb0ad4e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: checkout: moving from main to main
+[33mcb0ad4e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: checkout: moving from clean-branch to main
+[33m0b0d341[m HEAD@{2}: commit (initial): fresh clean commit
+[33mcb0ad4e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{3}: reset: moving to HEAD~2
+[33m79d091d[m HEAD@{4}: rebase (abort): returning to refs/heads/main
+[33mf9fe751[m HEAD@{5}: pull origin main --rebase (start): checkout f9fe751236d5ba515d366cb460db90c021ec0ec2
+[33m79d091d[m HEAD@{6}: commit: add file
+[33m338b729[m HEAD@{7}: reset: moving to HEAD~2
+[33m332110b[m HEAD@{8}: reset: moving to HEAD~2
+[33m235af87[m HEAD@{9}: reset: moving to HEAD~2
+[33m259ac80[m HEAD@{10}: reset: moving to HEAD~2
+[33m375287b[m HEAD@{11}: commit: mail update
+[33mf9fe751[m HEAD@{12}: commit: mail update
+[33m259ac80[m HEAD@{13}: commit: mail update
+[33m44e9d35[m HEAD@{14}: commit: mail update
+[33m235af87[m HEAD@{15}: reset: moving to HEAD~2
+[33mbe006e5[m HEAD@{16}: commit: mail update
+[33m76d69b0[m HEAD@{17}: commit: mail update
+[33m235af87[m HEAD@{18}: commit: mail update
+[33m2a73ecc[m HEAD@{19}: commit: mail update
+[33m332110b[m HEAD@{20}: commit: mail update
+[33mc6b1448[m HEAD@{21}: commit: mail config update
+[33m338b729[m HEAD@{22}: commit: Added MRP column migration and update seeder
+[33mcb0ad4e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{23}: commit: Fix HTTPS issue
+[33m2f0f194[m HEAD@{24}: commit: Fix HTTPS issue
+[33m654b40e[m HEAD@{25}: commit: Fix HTTPS issue
+[33m6948e17[m HEAD@{26}: commit: Update Dockerfile
+[33m4ff68a9[m HEAD@{27}: commit: Update Dockerfile
+[33m3ff5fb1[m HEAD@{28}: commit: Update Dockerfile
+[33m7fe692f[m HEAD@{29}: commit: Update Dockerfile
+[33m1f192a2[m HEAD@{30}: commit: Update Dockerfile
+[33m2b34388[m HEAD@{31}: commit: Update Dockerfile
+[33m4bcab61[m HEAD@{32}: commit: Add Dockerfile and Apache config
+[33m50b6257[m HEAD@{33}: commit: login features
+[33m8d65d58[m HEAD@{34}: filter-branch: rewrite
+[33m30cdf46[m HEAD@{35}: commit: remove chronos cache from repo
+[33m606473e[m HEAD@{36}: reset: moving to HEAD~1
+[33m1abfc01[m HEAD@{37}: commit: Removed chronos cache files
+[33m606473e[m HEAD@{38}: commit: feat: Implement LSTM and Chronos sales prediction models
+[33md1b8fd2[m HEAD@{39}: commit: feat: Enhance leave management system with advanced tracking and new fields
+[33m6336d0c[m HEAD@{40}: commit: Remove ForecastController and its associated methods for sales forecasting
+[33mdb32869[m HEAD@{41}: commit: Add leave details view and invoice PDF generation
+[33m90964f0[m HEAD@{42}: commit: Enhance invoice view with a professional design overhaul and responsive layout; add test route for Purchase and Product models to verify relationships and data integrity.
+[33m58d9256[m HEAD@{43}: commit: Fresh stable Dockerfile for Render
+[33me44f30c[m HEAD@{44}: commit: Added GD extension for milon/barcode
+[33ma9de8f2[m HEAD@{45}: commit: Updated Dockerfile stable version
+[33m149e989[m HEAD@{46}: commit: Added Dockerfile
+[33m4c10b1f[m HEAD@{47}: commit: Add Wallet Report page with comprehensive customer wallet balances and transactions overview
+[33m3488000[m HEAD@{48}: commit: Add image and description columns to products table, and create payments view for customer transactions
+[33mf7328cd[m HEAD@{49}: Branch: renamed refs/heads/main to refs/heads/main
+[33mf7328cd[m HEAD@{51}: commit: first commit
+[33maffff2f[m HEAD@{52}: clone: from https://github.com/KAMALr80/smartErp.git

@@ -1,0 +1,47 @@
+/* ERP Specific Enhancements */
+.erp-badge {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+    letter-spacing: 1px;
+    z-index: 1000;
+    font-weight: 500;
+}
+
+.erp-badge i {
+    color: #00d4ff;
+    margin-right: 6px;
+}
+
+.credentials-panel p {
+    color: #aaa;
+    margin-bottom: 15px;
+}
+
+.submit-button i {
+    margin-right: 8px;
+    transition: 0.3s;
+}
+
+.submit-button:hover i {
+    transform: translateX(5px);
+}
+
+.switch-link a i {
+    margin-right: 5px;
+}
+
+/* Mobile Responsive for ERP */
+@media (max-width: 768px) {
+    .erp-badge {
+        top: 10px;
+        left: 10px;
+        font-size: 12px;
+    }
+
+    .auth-wrapper {
+        margin-top: 40px;
+    }
+}

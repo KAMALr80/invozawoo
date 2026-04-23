@@ -1,0 +1,26 @@
+# Core Flask API
+flask
+flask-cors
+gunicorn
+
+# Data Processing
+pandas>=2.2.0
+numpy>=1.26.0
+mysql-connector-python
+joblib
+
+# PyTorch (Chronos uses this)
+torch>=2.1.0
+torchvision
+torchaudio
+
+# HuggingFace / Chronos
+transformers>=4.35.0
+accelerate
+chronos-forecasting>=2.0.0
+
+# Visualization (optional)
+matplotlib
+
+# Machine Learning (fallback - lightweight only)
+scikit-learn

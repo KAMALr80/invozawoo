@@ -1,0 +1,166 @@
+/* ===============================
+   ATTENDANCE – MY PAGE STYLES
+================================ */
+
+/* Avatar Circle */
+.avatar-circle {
+    transition: transform 0.3s ease;
+}
+
+.avatar-circle:hover {
+    transform: scale(1.05);
+}
+
+/* Cards */
+.card {
+    border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Attendance Action Buttons */
+.btn-lg {
+    border-radius: 12px;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Attendance Table */
+.table thead th {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Today Highlight */
+.table-active {
+    background-color: rgba(25, 118, 210, 0.08) !important;
+}
+
+/* Attendance Status Badges */
+.badge {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+/* Employee Info Card */
+.employee-details span {
+    font-size: 14px;
+}
+
+/* Alerts */
+.alert {
+    border-radius: 10px;
+}
+
+/* Statistics Cards */
+.card .fw-bold {
+    letter-spacing: 0.3px;
+}
+
+/* Responsive Fix */
+@media (max-width: 768px) {
+    .btn-lg {
+        font-size: 14px;
+        padding: 14px;
+    }
+}
+
+
+/* ===== DASHBOARD ===== */
+
+.dashboard-container {
+    max-width: 1200px;
+}
+
+.dashboard-title {
+    margin-bottom: 25px;
+    color: #111827;
+}
+
+/* ===== CARDS ===== */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 35px;
+}
+
+.card {
+    padding: 20px;
+    border-radius: 12px;
+    color: #fff;
+}
+
+.card h4 {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.card h1 {
+    margin-top: 10px;
+    font-size: 36px;
+}
+
+/* Card Colors */
+.card-blue {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+}
+
+.card-green {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+.card-red {
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+}
+
+/* ===== CHARTS ===== */
+
+.chart-row {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.chart-box {
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+}
+
+.chart-large {
+    flex: 2;
+}
+
+.chart-small {
+    flex: 1;
+}
+
+.chart-box h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #111827;
+}
+
+.chart-canvas {
+    height: 300px;
+}
