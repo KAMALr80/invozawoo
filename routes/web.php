@@ -87,6 +87,11 @@ use App\Http\Controllers\Admin\AuditLogController;
 | Public Routes
 |--------------------------------------------------------------------------
 */
+// Welcome & Root
+Route::get('/', function () {
+    return redirect()->route('dashboard');
+});
+
 // Dashboard
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/dashboard/operations', [DashboardController::class, 'operationalPulse'])->name('dashboard.operations');
