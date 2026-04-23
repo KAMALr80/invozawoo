@@ -56,17 +56,35 @@ class WoocommerceService
     public function syncBatchProducts($products)
     {
         try {
-            $create = [];
-            $update = [];
+            if (empty($this->key) || empty($this->secret) || empty($this->url)) {
+                return false;
+            }
 
-            // In a real scenario, we would check which products exist in WC.
-            // For now, we'll use the existing sync logic but optimized for batching.
-            // Since we don't have woocommerce_id, we still need to check SKU, 
-            // but we can do it in a more optimized way if we wanted.
+            // Optimization: Fetch all products from WC once to map SKUs
+            // In a production app, we would cache this or use a local mapping table
+            $existingWcProducts = [];
+            $page = 1;
             
-            // However, to keep it simple and effective for this request, 
-            // we will process them in chunks and use the batch API.
-            
+            // To be super fast, we only fetch the necessary fields (id, sku)
+            do {
+                $response = Http::withBasicAuth($this->key, $this->secret)
+                    ->get($this->url . 'products', [
+                        'page' => $page,
+                        'per_page' => 100,
+                        'fields' => 'id,sku'
+                    ]);
+                
+                $batch = $response->json();
+                if (empty($batch) || !is_array($batch)) break;
+                
+                foreach ($batch as $wcItem) {
+                    if (!empty($wcItem['sku'])) {
+                        $existingWcProducts[$wcItem['sku']] = $wcItem['id'];
+                    }
+                }
+                $page++;
+            } while (count($batch) == 100 && $page < 5); // Limit to 500 for safety in this pass
+
             $batchData = [
                 'create' => [],
                 'update' => []
@@ -78,23 +96,20 @@ class WoocommerceService
                     'type' => 'simple',
                     'regular_price' => (string)$product->price,
                     'description' => $product->description,
-                    'short_description' => substr($product->description, 0, 100),
+                    'short_description' => substr(strip_tags($product->description), 0, 160),
                     'manage_stock' => true,
-                    'stock_quantity' => $product->quantity,
+                    'stock_quantity' => (int)$product->quantity,
                     'sku' => $product->product_code,
+                    'status' => 'publish'
                 ];
 
                 if ($product->image) {
                     $item['images'] = [['src' => asset('storage/' . $product->image)]];
                 }
 
-                // Check if exists (still needed unless we add woocommerce_id column)
-                $response = Http::withBasicAuth($this->key, $this->secret)
-                    ->get($this->url . 'products', ['sku' => $product->product_code]);
-                
-                $existing = $response->json();
-                if (!empty($existing)) {
-                    $item['id'] = $existing[0]['id'];
+                // Check if SKU exists in our fetched map
+                if (isset($existingWcProducts[$product->product_code])) {
+                    $item['id'] = $existingWcProducts[$product->product_code];
                     $batchData['update'][] = $item;
                 } else {
                     $batchData['create'][] = $item;
@@ -105,8 +120,20 @@ class WoocommerceService
                 return true;
             }
 
-            return Http::withBasicAuth($this->key, $this->secret)
+            $response = Http::withBasicAuth($this->key, $this->secret)
+                ->timeout(60) // High timeout for batch operation
                 ->post($this->url . 'products/batch', $batchData);
+
+            if ($response->successful()) {
+                Log::info('WooCommerce Batch Sync Success', [
+                    'created' => count($batchData['create']),
+                    'updated' => count($batchData['update'])
+                ]);
+                return true;
+            }
+
+            Log::error('WooCommerce Batch Sync Failed: ' . $response->body());
+            return false;
 
         } catch (\Exception $e) {
             Log::error('WooCommerce Batch Sync Error: ' . $e->getMessage());
