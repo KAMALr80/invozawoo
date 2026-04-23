@@ -38,8 +38,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Force HTTPS in production (Render / Cloud hosting)
-        if (env('APP_FORCE_HTTPS', true)) {
-            // URL::forceScheme('https');
+        if (config('app.env') === 'production' || env('APP_FORCE_HTTPS', true)) {
+            URL::forceScheme('https');
         }
 
         // Pass pending counts to sidebar

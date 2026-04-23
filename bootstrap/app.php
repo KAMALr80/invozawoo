@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // ✅ Trust all proxies for Render/Cloud hosting
+        $middleware->trustProxies(at: '*');
 
         // 👇 Register middleware aliases
         $middleware->alias([
