@@ -5,6 +5,7 @@
 @section('content')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap">
 
 <div class="wc-elite-v2">
     <div class="aurora-bg"></div>
@@ -163,8 +164,6 @@
 </div>
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
-
     :root {
         --indigo-primary: #6366f1;
         --indigo-glow: #818cf8;
@@ -429,34 +428,40 @@
         }
 
         // Initialize Analytics Chart
-        const chartEl = document.getElementById('syncChart');
-        if (chartEl) {
-            const ctx = chartEl.getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                    datasets: [{
-                        label: 'Efficiency',
-                        data: [65, 78, 82, 75, 94, 88, 99],
-                        borderColor: '#818cf8',
-                        borderWidth: 4,
-                        tension: 0.4,
-                        fill: true,
-                        backgroundColor: 'rgba(129, 140, 248, 0.1)',
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b' } },
-                        x: { grid: { display: false }, ticks: { color: '#64748b' } }
-                    }
+        try {
+            const chartEl = document.getElementById('syncChart');
+            if (chartEl && typeof Chart !== 'undefined') {
+                const ctx = chartEl.getContext('2d');
+                if (ctx) {
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                            datasets: [{
+                                label: 'Efficiency',
+                                data: [65, 78, 82, 75, 94, 88, 99],
+                                borderColor: '#818cf8',
+                                borderWidth: 4,
+                                tension: 0.4,
+                                fill: true,
+                                backgroundColor: 'rgba(129, 140, 248, 0.1)',
+                                pointRadius: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b' } },
+                                x: { grid: { display: false }, ticks: { color: '#64748b' } }
+                            }
+                        }
+                    });
                 }
-            });
+            }
+        } catch (e) {
+            console.log('Nexus Analytics: Monitoring on standby.');
         }
     });
 </script>
