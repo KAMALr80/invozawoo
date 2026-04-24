@@ -321,19 +321,26 @@
     }
 
     // Basic live search
-    document.getElementById('nexusSearch').addEventListener('input', function(e) {
-        const query = e.target.value.toLowerCase();
-        const rows = document.querySelectorAll('.nexus-table tbody tr');
-        
-        rows.forEach(row => {
-            const name = row.querySelector('.fw-800').innerText.toLowerCase();
-            const sku = row.querySelector('.sku-badge').innerText.toLowerCase();
-            if (name.includes(query) || sku.includes(query)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+    const searchInput = document.getElementById('nexusSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('.nexus-table tbody tr');
+            
+            rows.forEach(row => {
+                const nameEl = row.querySelector('.fw-800');
+                const skuEl = row.querySelector('.sku-badge');
+                
+                const name = nameEl ? nameEl.innerText.toLowerCase() : '';
+                const sku = skuEl ? skuEl.innerText.toLowerCase() : '';
+                
+                if (name.includes(query) || sku.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         });
-    });
+    }
 </script>
 @endsection
