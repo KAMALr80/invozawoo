@@ -2317,12 +2317,9 @@
         });
 
         function updateOmniHighlight(items) {
-            if (!items) return;
             items.forEach((item, i) => {
-                if (item && item.classList) {
-                    item.classList.toggle('selected', i === selectedIndex);
-                    if (i === selectedIndex) item.scrollIntoView({ block: 'nearest' });
-                }
+                item.classList.toggle('selected', i === selectedIndex);
+                if (i === selectedIndex) item.scrollIntoView({ block: 'nearest' });
             });
         }
         // ================= NOTIFICATION SYSTEM LOGIC =================
@@ -2331,44 +2328,29 @@
 
         async function fetchNotifications() {
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-                const response = await fetch("{{ route('notifications.unread') }}", {
-                    signal: controller.signal,
-                    headers: { 'Accept': 'application/json' }
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                
+                const response = await fetch("{{ route('notifications.unread') }}");
                 const data = await response.json();
+                
                 updateNotificationUI(data);
                 
                 // Play sound if new notifications arrived
-                if (data && data.count > lastUnreadCount) {
-                    notificationAudio.play().catch(e => {}); // Silent fail for audio
+                if (data.count > lastUnreadCount) {
+                    notificationAudio.play().catch(e => console.log('Audio play failed:', e));
                 }
-                lastUnreadCount = data?.count || 0;
+                lastUnreadCount = data.count;
             } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.log('Pulse Monitor: Notification sync standby.');
-                }
+                console.error('Notification Fetch Error:', error);
             }
         }
 
         function updateNotificationUI(data) {
-            if (!data) return;
-            
             const badge = document.getElementById('notificationBadge');
             const list = document.getElementById('notificationList');
             
             // Update Badge
             if (badge) {
-                const count = parseInt(data.count || 0);
-                if (count > 0) {
-                    badge.innerText = count;
+                if (data.count > 0) {
+                    badge.innerText = data.count;
                     badge.classList.add('active');
                 } else {
                     badge.classList.remove('active');
@@ -2377,28 +2359,25 @@
 
             // Update List
             if (list) {
-                const notifications = data.notifications || [];
-                if (notifications.length === 0) {
+                if (data.notifications.length === 0) {
                     list.innerHTML = `<div class="no-notifications">No new notifications</div>`;
                     return;
                 }
 
                 let html = '';
-                notifications.forEach(n => {
-                    if (n && n.id) {
-                        html += `
-                            <a href="${n.url || '#'}" class="notification-item unread" onclick="markNotificationAsRead(event, '${n.id}', '${n.url || '#'}')">
-                                <div class="noti-icon">
-                                    <i class="${n.icon || 'fas fa-bell'}"></i>
-                                </div>
-                                <div class="noti-content">
-                                    <span class="noti-title">${n.title || 'System Alert'}</span>
-                                    <span class="noti-message">${n.message || ''}</span>
-                                    <span class="noti-time">${n.time || ''}</span>
-                                </div>
-                            </a>
-                        `;
-                    }
+                data.notifications.forEach(n => {
+                    html += `
+                        <a href="${n.url}" class="notification-item unread" onclick="markNotificationAsRead(event, '${n.id}', '${n.url}')">
+                            <div class="noti-icon">
+                                <i class="${n.icon}"></i>
+                            </div>
+                            <div class="noti-content">
+                                <span class="noti-title">${n.title}</span>
+                                <span class="noti-message">${n.message}</span>
+                                <span class="noti-time">${n.time}</span>
+                            </div>
+                        </a>
+                    `;
                 });
                 list.innerHTML = html;
             }
@@ -2406,17 +2385,13 @@
 
         function toggleNotifications() {
             const dropdown = document.getElementById('notificationDropdown');
-            if (dropdown) {
-                dropdown.classList.toggle('active');
-                
-                // Close other dropdowns
-                document.querySelectorAll('.top-nav-dropdown').forEach(d => {
-                    if (d !== dropdown) d.classList.remove('active');
-                });
-                
-                if (dropdown.classList.contains('active')) {
-                    fetchNotifications();
-                }
+            dropdown.classList.toggle('active');
+            
+            // Close other dropdowns
+            document.querySelectorAll('.top-nav-dropdown').forEach(d => d.classList.remove('active'));
+            
+            if (dropdown.classList.contains('active')) {
+                fetchNotifications();
             }
         }
 
