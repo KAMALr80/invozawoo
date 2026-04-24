@@ -150,10 +150,7 @@ class WoocommerceService
                 ];
 
                 if ($product->image) {
-                    $imageUrl = filter_var($product->image, FILTER_VALIDATE_URL) 
-                        ? $product->image 
-                        : config('app.url') . '/storage/' . $product->image;
-                    $item['images'] = [['src' => $imageUrl]];
+                    $item['images'] = [['src' => $product->image_url]];
                 }
 
                 // Check if SKU exists in our fetched map
