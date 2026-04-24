@@ -23,23 +23,23 @@ class WoocommerceService
     /**
      * Verify connection with provided credentials (alias for checkConnection)
      */
-    public function verifyConnection()
+    public function verifyConnection($useCache = true)
     {
-        return $this->checkConnection();
+        return $this->checkConnection($useCache);
     }
 
     /**
      * Check if API connection is valid
      */
-    public function checkConnection()
+    public function checkConnection($useCache = true)
     {
-        return cache()->remember('woocommerce_connection_status', 300, function() {
+        $check = function() {
             try {
                 if (empty($this->key) || empty($this->secret) || empty($this->url)) {
                     return false;
                 }
                 $response = Http::withBasicAuth($this->key, $this->secret)
-                    ->timeout(10)
+                    ->timeout(15)
                     ->get($this->url . 'system_status');
                 
                 return $response->successful();
@@ -47,7 +47,13 @@ class WoocommerceService
                 Log::error('WooCommerce Connection Error: ' . $e->getMessage());
                 return false;
             }
-        });
+        };
+
+        if (!$useCache) {
+            return $check();
+        }
+
+        return cache()->remember('woocommerce_connection_status', 300, $check);
     }
 
     /**

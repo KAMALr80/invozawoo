@@ -104,7 +104,8 @@ class WoocommerceController extends Controller
     {
         $service = new WoocommerceService($request->app_url, $request->consumer_key, $request->consumer_secret);
         
-        if ($service->verifyConnection()) {
+        // Disable cache for testing purposes
+        if ($service->verifyConnection(false)) {
             return response()->json(['success' => true, 'message' => 'Successfully connected to WooCommerce!']);
         }
         
