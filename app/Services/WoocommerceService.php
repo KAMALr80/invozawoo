@@ -111,6 +111,11 @@ class WoocommerceService
         $idMap = [];
 
         foreach ($products as $product) {
+            // Skip products without code/sku
+            if (empty($product->product_code)) {
+                continue;
+            }
+
             // Find category ID
             $categories = [];
             if ($product->category && isset($wcCategories[$product->category])) {
@@ -118,11 +123,12 @@ class WoocommerceService
             }
 
             $item = [
-                'name' => $product->name,
+                'name' => (string)$product->name,
                 'type' => 'simple',
                 'regular_price' => (string)$product->price,
-                'description' => $product->description ?? '',
-                'sku' => $product->product_code,
+                'description' => (string)($product->description ?? ''),
+                'short_description' => (string)($product->description ?? ''),
+                'sku' => (string)$product->product_code,
                 'manage_stock' => true,
                 'stock_quantity' => (int)$product->quantity,
                 'stock_status' => $product->quantity > 0 ? 'instock' : 'outofstock',
@@ -131,9 +137,7 @@ class WoocommerceService
                 'catalog_visibility' => 'visible',
             ];
 
-            if ($product->image) {
-                $item['images'] = [['src' => $product->image_url]];
-            }
+            $item['images'] = [['src' => $product->image_url]];
 
             if ($product->woocommerce_product_id) {
                 $item['id'] = $product->woocommerce_product_id;
@@ -156,7 +160,7 @@ class WoocommerceService
 
                 // Process Created
                 foreach ($data['create'] ?? [] as $item) {
-                    if (isset($item['id'])) {
+                    if (isset($item['id']) && isset($item['sku'])) {
                         $product = $idMap[$item['sku']] ?? null;
                         if ($product) {
                             $product->update([
@@ -172,7 +176,7 @@ class WoocommerceService
 
                 // Process Updated
                 foreach ($data['update'] ?? [] as $item) {
-                    if (isset($item['id'])) {
+                    if (isset($item['id']) && isset($item['sku'])) {
                         $product = $idMap[$item['sku']] ?? null;
                         if ($product) {
                             $product->update(['synced_at' => now()]);
