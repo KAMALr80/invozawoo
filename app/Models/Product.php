@@ -276,22 +276,6 @@ class Product extends Model
     }
 
     /**
-     * Get absolute image URL
-     */
-    public function getImageUrlAttribute()
-    {
-        if (!$this->image) {
-            return 'https://via.placeholder.com/600x600.png?text=No+Image';
-        }
-
-        if (filter_var($this->image, FILTER_VALIDATE_URL)) {
-            return $this->image;
-        }
-
-        return asset('storage/' . $this->image);
-    }
-
-    /**
      * Get volumetric weight (for shipping calculation)
      */
     public function getVolumetricWeightAttribute()
