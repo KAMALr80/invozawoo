@@ -142,8 +142,11 @@ class WoocommerceService
                     'manage_stock' => true,
                     'stock_quantity' => (int)$product->quantity,
                     'stock_status' => $product->quantity > 0 ? 'instock' : 'outofstock',
+                    'in_stock' => $product->quantity > 0, // Legacy compatibility
                     'categories' => $categories,
-                    'status' => 'publish'
+                    'status' => 'publish',
+                    'catalog_visibility' => 'visible',
+                    'featured' => (bool)$product->is_featured
                 ];
 
                 if ($product->image) {
