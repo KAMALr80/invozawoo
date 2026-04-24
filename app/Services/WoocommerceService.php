@@ -107,6 +107,10 @@ class WoocommerceService
         }
 
         $wcCategories = $this->getCategories();
+        
+        // Auto-map existing products by SKU if they don't have ID locally
+        $this->mapExistingProducts($products);
+
         $batchData = ['create' => [], 'update' => []];
         $idMap = [];
 
@@ -116,10 +120,22 @@ class WoocommerceService
                 continue;
             }
 
-            // Find category ID
+            // Find or Create category ID
             $categories = [];
-            if ($product->category && isset($wcCategories[$product->category])) {
-                $categories[] = ['id' => $wcCategories[$product->category]];
+            if ($product->category) {
+                $catId = $this->getOrCreateCategory($product->category, $wcCategories);
+                if ($catId) {
+                    $categories[] = ['id' => $catId];
+                }
+            }
+
+            // Brand Mapping (common for brand plugins)
+            $brands = [];
+            if ($product->brand) {
+                $brandId = $this->getOrCreateBrand($product->brand);
+                if ($brandId) {
+                    $brands[] = ['id' => $brandId];
+                }
             }
 
             $item = [
@@ -293,6 +309,59 @@ class WoocommerceService
         } catch (\Exception $e) {
             return ['success' => false, 'message' => 'Order Sync error: ' . $e->getMessage()];
         }
+    }
+
+    protected function mapExistingProducts($products)
+    {
+        $productsWithoutId = $products->filter(fn($p) => empty($p->woocommerce_product_id));
+        if ($productsWithoutId->isEmpty()) return;
+
+        foreach ($productsWithoutId as $product) {
+            try {
+                $response = Http::withBasicAuth($this->key, $this->secret)
+                    ->get("{$this->url}/wp-json/wc/v3/products", ['sku' => $product->product_code]);
+
+                if ($response->successful() && !empty($response->json())) {
+                    $wcProduct = $response->json()[0];
+                    $product->update([
+                        'woocommerce_product_id' => $wcProduct['id'],
+                        'synced_at' => now()
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error("SKU Mapping Error for {$product->product_code}: " . $e->getMessage());
+            }
+        }
+    }
+
+    protected function getOrCreateCategory($name, &$wcCategories)
+    {
+        if (isset($wcCategories[$name])) {
+            return $wcCategories[$name];
+        }
+
+        try {
+            $response = Http::withBasicAuth($this->key, $this->secret)
+                ->post("{$this->url}/wp-json/wc/v3/products/categories", ['name' => $name]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $wcCategories[$name] = $data['id']; // Cache for current batch
+                return $data['id'];
+            }
+        } catch (\Exception $e) {
+            Log::error("WC Category Create Error: " . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    protected function getOrCreateBrand($name)
+    {
+        // Many WooCommerce brand plugins use a custom taxonomy 'product_brand'
+        // We'll attempt to find/create it via terms API if possible, or just skip
+        // This is a common pattern for brands
+        return null; // Placeholder for now as we don't know the specific plugin
     }
 
     protected function getOrCreateCustomer($billing, $wcCustomerId)
