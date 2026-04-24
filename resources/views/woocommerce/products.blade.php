@@ -263,6 +263,10 @@
         const productId = btn.getAttribute('data-id');
         const text = btn.querySelector('.btn-text');
         const loader = btn.querySelector('.btn-loading');
+        
+        // If button is already synced or elements missing, return
+        if (!text || !loader || btn.disabled) return;
+
         const toast = document.getElementById('nexusToast');
 
         // State: Loading
@@ -283,6 +287,7 @@
             if (data.success) {
                 btn.classList.replace('btn-pulse-sync', 'btn-success');
                 btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Synced';
+                btn.disabled = true; // Stay disabled after sync
             } else {
                 resetBtn(btn, text, loader);
             }
