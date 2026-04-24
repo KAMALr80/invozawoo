@@ -51,6 +51,31 @@ class WoocommerceService
     }
 
     /**
+     * Get or Create Categories in WooCommerce
+     */
+    protected function getWcCategoryMap()
+    {
+        return cache()->remember('woocommerce_category_map', 3600, function() {
+            try {
+                $response = Http::withBasicAuth($this->key, $this->secret)
+                    ->get($this->url . 'products/categories', ['per_page' => 100]);
+                
+                if ($response->successful()) {
+                    $categories = $response->json();
+                    $map = [];
+                    foreach ($categories as $cat) {
+                        $map[strtolower($cat['name'])] = $cat['id'];
+                    }
+                    return $map;
+                }
+            } catch (\Exception $e) {
+                Log::error('WooCommerce Category Fetch Error: ' . $e->getMessage());
+            }
+            return [];
+        });
+    }
+
+    /**
      * Sync Batch of Products
      */
     public function syncBatchProducts($products)
@@ -60,11 +85,13 @@ class WoocommerceService
                 return ['success' => false, 'message' => 'Neural Bridge offline. Missing credentials.'];
             }
 
+            // Fetch Category Map
+            $categoryMap = $this->getWcCategoryMap();
+
             // Optimization: Fetch all products from WC once to map SKUs
             $existingWcProducts = [];
             $page = 1;
             
-            // To be super fast, we only fetch the necessary fields (id, sku) using _fields (WC API standard)
             do {
                 $response = Http::withBasicAuth($this->key, $this->secret)
                     ->get($this->url . 'products', [
@@ -82,7 +109,7 @@ class WoocommerceService
                     }
                 }
                 $page++;
-            } while (count($batch) == 100 && $page < 20); // Support up to 2000 products for initial mapping
+            } while (count($batch) == 100 && $page < 20);
 
             $batchData = [
                 'create' => [],
@@ -90,20 +117,30 @@ class WoocommerceService
             ];
 
             foreach ($products as $product) {
+                // Map Category ID
+                $categories = [];
+                if ($product->category) {
+                    $catName = strtolower($product->category);
+                    if (isset($categoryMap[$catName])) {
+                        $categories[] = ['id' => $categoryMap[$catName]];
+                    }
+                }
+
                 $item = [
                     'name' => $product->name,
                     'type' => 'simple',
                     'regular_price' => (string)$product->price,
                     'description' => $product->description ?? '',
                     'short_description' => $product->description ? substr(strip_tags($product->description), 0, 160) : '',
+                    'sku' => $product->product_code,
                     'manage_stock' => true,
                     'stock_quantity' => (int)$product->quantity,
-                    'sku' => $product->product_code,
+                    'stock_status' => $product->quantity > 0 ? 'instock' : 'outofstock',
+                    'categories' => $categories,
                     'status' => 'publish'
                 ];
 
                 if ($product->image) {
-                    // Fix: Ensure we use full URL for production sync
                     $imageUrl = filter_var($product->image, FILTER_VALIDATE_URL) 
                         ? $product->image 
                         : config('app.url') . '/storage/' . $product->image;
@@ -124,23 +161,15 @@ class WoocommerceService
             }
 
             $response = Http::withBasicAuth($this->key, $this->secret)
-                ->timeout(120) // High timeout for batch operation
+                ->timeout(120)
                 ->post($this->url . 'products/batch', $batchData);
 
             if ($response->successful()) {
                 $data = $response->json();
-                $createdCount = count($data['create'] ?? []);
-                $updatedCount = count($data['update'] ?? []);
-                
-                Log::info('WooCommerce Batch Sync Success', [
-                    'created' => $createdCount,
-                    'updated' => $updatedCount
-                ]);
-                
                 return [
                     'success' => true,
-                    'created' => $createdCount,
-                    'updated' => $updatedCount
+                    'created' => count($data['create'] ?? []),
+                    'updated' => count($data['update'] ?? [])
                 ];
             }
 
@@ -158,7 +187,6 @@ class WoocommerceService
      */
     public function syncProduct($product)
     {
-        // Existing single sync logic
         return $this->syncBatchProducts(collect([$product]));
     }
 }
