@@ -5,7 +5,6 @@
 @section('content')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap">
 
 <div class="wc-elite-v2">
     <div class="aurora-bg"></div>
@@ -84,38 +83,29 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <div class="analytics-card-glass p-5 animate__animated animate__fadeInUp">
-                            <div class="row g-4">
-                                <div class="col-lg-8">
-                                    <div class="d-flex justify-content-between align-items-center mb-4">
-                                        <div>
-                                            <h5 class="fw-800 text-white mb-1">Transmission Efficiency</h5>
-                                            <p class="text-muted small mb-0">Neural bridge performance metrics</p>
+                        <div class="analytics-card-glass p-4 animate__animated animate__fadeInUp">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-800 text-white mb-0">Quick Actions</h5>
+                                <div class="badge-elite-outline">Neural Links</div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <a href="{{ route('woocommerce.products') }}" class="action-card-glass">
+                                        <div class="action-icon purple"><i class="bi bi-box-seam"></i></div>
+                                        <div class="action-info">
+                                            <div class="title">Product Nexus</div>
+                                            <div class="desc">Individual Product Sync</div>
                                         </div>
-                                        <div class="badge-elite-outline">Real-time</div>
-                                    </div>
-                                    <div style="height: 250px; position: relative;">
-                                        <canvas id="syncChart"></canvas>
-                                    </div>
+                                    </a>
                                 </div>
-                                <div class="col-lg-4 border-start border-glass ps-lg-5">
-                                    <h5 class="fw-800 text-white mb-4">Quick Actions</h5>
-                                    <div class="d-grid gap-3">
-                                        <a href="{{ route('woocommerce.products') }}" class="action-card-glass">
-                                            <div class="action-icon purple"><i class="bi bi-box-seam"></i></div>
-                                            <div class="action-info">
-                                                <div class="title">Product Nexus</div>
-                                                <div class="desc">Individual Sync</div>
-                                            </div>
-                                        </a>
-                                        <a href="{{ route('woocommerce.settings') }}" class="action-card-glass">
-                                            <div class="action-icon blue"><i class="bi bi-gear-fill"></i></div>
-                                            <div class="action-info">
-                                                <div class="title">Config Bridge</div>
-                                                <div class="desc">API & Logic</div>
-                                            </div>
-                                        </a>
-                                    </div>
+                                <div class="col-md-6">
+                                    <a href="{{ route('woocommerce.settings') }}" class="action-card-glass">
+                                        <div class="action-icon blue"><i class="bi bi-gear-fill"></i></div>
+                                        <div class="action-info">
+                                            <div class="title">Config Bridge</div>
+                                            <div class="desc">Manage API & Logic</div>
+                                        </div>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -164,6 +154,8 @@
 </div>
 
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+
     :root {
         --indigo-primary: #6366f1;
         --indigo-glow: #818cf8;
@@ -428,41 +420,32 @@
         }
 
         // Initialize Analytics Chart
-        try {
-            const chartEl = document.getElementById('syncChart');
-            if (chartEl && typeof Chart !== 'undefined') {
-                const ctx = chartEl.getContext('2d');
-                if (ctx) {
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                            datasets: [{
-                                label: 'Efficiency',
-                                data: [65, 78, 82, 75, 94, 88, 99],
-                                borderColor: '#818cf8',
-                                borderWidth: 4,
-                                tension: 0.4,
-                                fill: true,
-                                backgroundColor: 'rgba(129, 140, 248, 0.1)',
-                                pointRadius: 0
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b' } },
-                                x: { grid: { display: false }, ticks: { color: '#64748b' } }
-                            }
-                        }
-                    });
+        const ctx = document.getElementById('syncChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Efficiency',
+                    data: [65, 78, 82, 75, 94, 88, 99],
+                    borderColor: '#818cf8',
+                    borderWidth: 4,
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(129, 140, 248, 0.1)',
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b' } },
+                    x: { grid: { display: false }, ticks: { color: '#64748b' } }
                 }
             }
-        } catch (e) {
-            console.log('Nexus Analytics: Monitoring on standby.');
-        }
+        });
     });
 </script>
 @endsection
