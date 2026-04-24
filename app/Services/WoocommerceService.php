@@ -57,25 +57,24 @@ class WoocommerceService
     {
         try {
             if (empty($this->key) || empty($this->secret) || empty($this->url)) {
-                return false;
+                return ['success' => false, 'message' => 'Neural Bridge offline. Missing credentials.'];
             }
 
             // Optimization: Fetch all products from WC once to map SKUs
-            // In a production app, we would cache this or use a local mapping table
             $existingWcProducts = [];
             $page = 1;
             
-            // To be super fast, we only fetch the necessary fields (id, sku)
+            // To be super fast, we only fetch the necessary fields (id, sku) using _fields (WC API standard)
             do {
                 $response = Http::withBasicAuth($this->key, $this->secret)
                     ->get($this->url . 'products', [
                         'page' => $page,
                         'per_page' => 100,
-                        'fields' => 'id,sku'
+                        '_fields' => 'id,sku'
                     ]);
                 
                 $batch = $response->json();
-                if (empty($batch) || !is_array($batch)) break;
+                if (empty($batch) || !is_array($batch) || isset($batch['code'])) break;
                 
                 foreach ($batch as $wcItem) {
                     if (!empty($wcItem['sku'])) {
@@ -83,7 +82,7 @@ class WoocommerceService
                     }
                 }
                 $page++;
-            } while (count($batch) == 100 && $page < 5); // Limit to 500 for safety in this pass
+            } while (count($batch) == 100 && $page < 20); // Support up to 2000 products for initial mapping
 
             $batchData = [
                 'create' => [],
@@ -95,8 +94,8 @@ class WoocommerceService
                     'name' => $product->name,
                     'type' => 'simple',
                     'regular_price' => (string)$product->price,
-                    'description' => $product->description,
-                    'short_description' => substr(strip_tags($product->description), 0, 160),
+                    'description' => $product->description ?? '',
+                    'short_description' => $product->description ? substr(strip_tags($product->description), 0, 160) : '',
                     'manage_stock' => true,
                     'stock_quantity' => (int)$product->quantity,
                     'sku' => $product->product_code,
@@ -104,7 +103,11 @@ class WoocommerceService
                 ];
 
                 if ($product->image) {
-                    $item['images'] = [['src' => asset('storage/' . $product->image)]];
+                    // Fix: Ensure we use full URL for production sync
+                    $imageUrl = filter_var($product->image, FILTER_VALIDATE_URL) 
+                        ? $product->image 
+                        : config('app.url') . '/storage/' . $product->image;
+                    $item['images'] = [['src' => $imageUrl]];
                 }
 
                 // Check if SKU exists in our fetched map
@@ -117,27 +120,36 @@ class WoocommerceService
             }
 
             if (empty($batchData['create']) && empty($batchData['update'])) {
-                return true;
+                return ['success' => true, 'created' => 0, 'updated' => 0];
             }
 
             $response = Http::withBasicAuth($this->key, $this->secret)
-                ->timeout(60) // High timeout for batch operation
+                ->timeout(120) // High timeout for batch operation
                 ->post($this->url . 'products/batch', $batchData);
 
             if ($response->successful()) {
+                $data = $response->json();
+                $createdCount = count($data['create'] ?? []);
+                $updatedCount = count($data['update'] ?? []);
+                
                 Log::info('WooCommerce Batch Sync Success', [
-                    'created' => count($batchData['create']),
-                    'updated' => count($batchData['update'])
+                    'created' => $createdCount,
+                    'updated' => $updatedCount
                 ]);
-                return true;
+                
+                return [
+                    'success' => true,
+                    'created' => $createdCount,
+                    'updated' => $updatedCount
+                ];
             }
 
             Log::error('WooCommerce Batch Sync Failed: ' . $response->body());
-            return false;
+            return ['success' => false, 'message' => 'Transmission Error: ' . $response->status()];
 
         } catch (\Exception $e) {
-            Log::error('WooCommerce Batch Sync Error: ' . $e->getMessage());
-            return false;
+            Log::error('WooCommerce Batch Sync Exception: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Internal Pulse Failure: ' . $e->getMessage()];
         }
     }
 

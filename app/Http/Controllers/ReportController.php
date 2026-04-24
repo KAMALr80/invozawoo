@@ -26,6 +26,11 @@ class ReportController extends Controller
      * ================= SALES REPORTS =================
      */
 
+    public function sales(Request $request)
+    {
+        return $this->salesReport($request);
+    }
+
     public function salesReport(Request $request)
     {
         $startDate = $request->get('start_date', now()->startOfMonth()->format('Y-m-d'));
@@ -241,13 +246,46 @@ class ReportController extends Controller
 
     public function customers(Request $request)
     {
-        $customers = Customer::withCount('sales')->get();
+        return $this->customerReport($request);
+    }
 
-        return view('reports.customers', [
+    public function customerReport(Request $request)
+    {
+        $status = $request->get('status', 'all');
+        $search = $request->get('search', '');
+        $sortBy = $request->get('sort_by', 'name');
+        $sortOrder = $request->get('sort_order', 'asc');
+
+        $query = Customer::query();
+
+        if ($status === 'active') {
+            $query->whereNull('deleted_at');
+        } elseif ($status === 'inactive') {
+            $query->whereNotNull('deleted_at');
+        }
+
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('mobile', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('gst_no', 'like', "%{$search}%");
+            });
+        }
+
+        $customers = $query->orderBy($sortBy, $sortOrder)->paginate(20)->withQueryString();
+
+        $stats = $this->calculateCustomerStats($customers);
+
+        return view('reports.customers_report', [
             'customers' => $customers,
-            'totalCustomers' => $customers->count(),
-            'activeCustomers' => $customers->whereNull('deleted_at')->count(),
-            'newThisMonth' => $customers->where('created_at', '>=', now()->startOfMonth())->count(),
+            'stats' => $stats,
+            'filters' => [
+                'status' => $status,
+                'search' => $search,
+                'sort_by' => $sortBy,
+                'sort_order' => $sortOrder,
+            ],
         ]);
     }
 
@@ -323,49 +361,7 @@ class ReportController extends Controller
         return $pdf->download('customers_report_' . date('Y-m-d') . '.pdf');
     }
 
-    /**
-     * ================= CUSTOMER DETAILED REPORT =================
-     */
 
-    public function customerReport(Request $request)
-    {
-        $status = $request->get('status', 'all');
-        $search = $request->get('search', '');
-        $sortBy = $request->get('sort_by', 'name');
-        $sortOrder = $request->get('sort_order', 'asc');
-
-        $query = Customer::query();
-
-        if ($status === 'active') {
-            $query->whereNull('deleted_at');
-        } elseif ($status === 'inactive') {
-            $query->whereNotNull('deleted_at');
-        }
-
-        if (!empty($search)) {
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('mobile', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('gst_no', 'like', "%{$search}%");
-            });
-        }
-
-        $customers = $query->orderBy($sortBy, $sortOrder)->paginate(20)->withQueryString();
-
-        $stats = $this->calculateCustomerStats($customers);
-
-        return view('reports.customers_report', [
-            'customers' => $customers,
-            'stats' => $stats,
-            'filters' => [
-                'status' => $status,
-                'search' => $search,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
-            ],
-        ]);
-    }
 
     public function exportCustomerReportCSV(Request $request)
     {
@@ -2369,16 +2365,41 @@ public function exportAttendanceCSV(Request $request)
 
     public function financial(Request $request)
     {
-        $startDate = $request->input('start_date', now()->startOfMonth());
-        $endDate = $request->input('end_date', now());
+        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : now()->startOfMonth();
+        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : now()->endOfDay();
 
         $sales = Sale::whereBetween('created_at', [$startDate, $endDate])->get();
         $purchases = Purchase::whereBetween('created_at', [$startDate, $endDate])->get();
 
         $totalRevenue = $sales->sum('grand_total');
-        $totalExpenses = $purchases->sum('total');
+        $totalExpenses = $purchases->sum('grand_total');
         $netProfit = $totalRevenue - $totalExpenses;
         $netProfitMargin = $totalRevenue > 0 ? round(($netProfit / $totalRevenue) * 100, 2) : 0;
+
+        // Monthly Trends (Last 6 Months)
+        $trends = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $mStart = now()->subMonths($i)->startOfMonth();
+            $mEnd = now()->subMonths($i)->endOfMonth();
+            
+            $mSales = Sale::whereBetween('created_at', [$mStart, $mEnd])->sum('grand_total');
+            $mPurchases = Purchase::whereBetween('created_at', [$mStart, $mEnd])->sum('grand_total');
+            
+            $trends[] = [
+                'month' => $mStart->format('M'),
+                'revenue' => (float)$mSales,
+                'expenses' => (float)$mPurchases,
+                'profit' => (float)($mSales - $mPurchases)
+            ];
+        }
+
+        // Payment Status Breakdown
+        $paymentStatus = [
+            'paid' => $sales->where('payment_status', 'paid')->sum('grand_total'),
+            'partial' => $sales->where('payment_status', 'partial')->sum('grand_total'),
+            'emi' => $sales->where('payment_status', 'emi')->sum('grand_total'),
+            'unpaid' => $sales->where('payment_status', 'unpaid')->sum('grand_total'),
+        ];
 
         return view('reports.financial', [
             'totalRevenue' => $totalRevenue,
@@ -2391,25 +2412,37 @@ public function exportAttendanceCSV(Request $request)
             'totalPurchases' => $totalExpenses,
             'totalPurchaseOrders' => $purchases->count(),
             'avgPurchaseValue' => $purchases->count() > 0 ? $totalExpenses / $purchases->count() : 0,
-            'amountReceived' => $sales->where('payment_status', 'paid')->sum('grand_total'),
-            'outstandingAmount' => $sales->where('payment_status', '!=', 'paid')->sum('grand_total'),
-            'collectionRate' => $totalRevenue > 0 ? round((($sales->where('payment_status', 'paid')->sum('grand_total') / $totalRevenue) * 100), 2) : 0,
-            'operatingCashFlow' => $netProfit,
-            'liquidityRatio' => '1.5',
-            'debtRatio' => '32',
+            'amountReceived' => $sales->sum('paid_amount'),
+            'outstandingAmount' => $totalRevenue - $sales->sum('paid_amount'),
+            'collectionRate' => $totalRevenue > 0 ? round((($sales->sum('paid_amount') / $totalRevenue) * 100), 2) : 0,
+            'trends' => $trends,
+            'paymentStatus' => $paymentStatus,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
         ]);
     }
 
     public function exportFinancialCSV(Request $request)
     {
-        $sales = Sale::all();
-        $purchases = Purchase::all();
+        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : now()->startOfMonth();
+        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : now()->endOfDay();
 
-        $csvData = "Financial Summary Report\n";
+        $sales = Sale::whereBetween('created_at', [$startDate, $endDate])->get();
+        $purchases = Purchase::whereBetween('created_at', [$startDate, $endDate])->get();
+
+        $csvData = "Financial Summary Report (" . $startDate->format('d M Y') . " to " . $endDate->format('d M Y') . ")\n";
         $csvData .= "Generated: " . now()->format('d-m-Y H:i:s') . "\n\n";
-        $csvData .= "Total Revenue,Total Expenses,Net Profit,Profit Margin %\n";
-        $profitMargin = $sales->sum('grand_total') > 0 ? round((($sales->sum('grand_total') - $purchases->sum('total')) / $sales->sum('grand_total')) * 100, 2) : 0;
-        $csvData .= "\"{$sales->sum('grand_total')}\",\"{$purchases->sum('total')}\",\"" . ($sales->sum('grand_total') - $purchases->sum('total')) . "\",\"{$profitMargin}\"\n";
+        
+        $csvData .= "Metric,Value\n";
+        $csvData .= "Total Revenue,\"{$sales->sum('grand_total')}\"\n";
+        $csvData .= "Total Expenses,\"{$purchases->sum('grand_total')}\"\n";
+        $netProfit = $sales->sum('grand_total') - $purchases->sum('grand_total');
+        $csvData .= "Net Profit,\"{$netProfit}\"\n";
+        $profitMargin = $sales->sum('grand_total') > 0 ? round(($netProfit / $sales->sum('grand_total')) * 100, 2) : 0;
+        $csvData .= "Profit Margin %,\"{$profitMargin}%\"\n";
+        $csvData .= "Total Orders,\"{$sales->count()}\"\n";
+        $csvData .= "Amount Received,\"{$sales->sum('paid_amount')}\"\n";
+        $csvData .= "Outstanding Amount,\"" . ($sales->sum('grand_total') - $sales->sum('paid_amount')) . "\"\n";
 
         return response($csvData, 200, [
             'Content-Type' => 'text/csv',
@@ -2419,14 +2452,14 @@ public function exportAttendanceCSV(Request $request)
 
     public function exportFinancialPDF(Request $request)
     {
-        $startDate = $request->input('start_date', now()->startOfMonth());
-        $endDate = $request->input('end_date', now());
+        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : now()->startOfMonth();
+        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : now()->endOfDay();
 
         $sales = Sale::whereBetween('created_at', [$startDate, $endDate])->get();
         $purchases = Purchase::whereBetween('created_at', [$startDate, $endDate])->get();
 
         $totalRevenue = $sales->sum('grand_total');
-        $totalExpenses = $purchases->sum('total');
+        $totalExpenses = $purchases->sum('grand_total');
         $netProfit = $totalRevenue - $totalExpenses;
         $netProfitMargin = $totalRevenue > 0 ? round(($netProfit / $totalRevenue) * 100, 2) : 0;
 
@@ -2441,12 +2474,12 @@ public function exportAttendanceCSV(Request $request)
             'totalPurchases' => $totalExpenses,
             'totalPurchaseOrders' => $purchases->count(),
             'avgPurchaseValue' => $purchases->count() > 0 ? $totalExpenses / $purchases->count() : 0,
-            'amountReceived' => $sales->where('payment_status', 'paid')->sum('grand_total'),
-            'outstandingAmount' => $sales->where('payment_status', '!=', 'paid')->sum('grand_total'),
-            'collectionRate' => $totalRevenue > 0 ? round((($sales->where('payment_status', 'paid')->sum('grand_total') / $totalRevenue) * 100), 2) : 0,
+            'amountReceived' => $sales->sum('paid_amount'),
+            'outstandingAmount' => $totalRevenue - $sales->sum('paid_amount'),
+            'collectionRate' => $totalRevenue > 0 ? round((($sales->sum('paid_amount') / $totalRevenue) * 100), 2) : 0,
             'operatingCashFlow' => $netProfit,
             'liquidityRatio' => '1.5',
-            'debtRatio' => '32',
+            'debtRatio' => '0.42',
             'startDate' => $startDate->format('d M Y'),
             'endDate' => $endDate->format('d M Y'),
             'generated_date' => now()->format('d M Y, h:i A'),
@@ -2454,7 +2487,7 @@ public function exportAttendanceCSV(Request $request)
         ];
 
         $pdf = Pdf::loadView('reports.pdf.financial_report', $data);
-        $pdf->setPaper('A4', 'landscape');
+        $pdf->setPaper('A4', 'portrait');
 
         return $pdf->download('financial_report_' . date('Y-m-d') . '.pdf');
     }

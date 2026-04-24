@@ -80,6 +80,7 @@ class Role extends Model
             'manage_leave_policies' => 'Manage Leave Policies',
 
             // Logistics & Shipments
+            'view_logistics' => 'View Logistics Module',
             'view_shipments' => 'View Shipments',
             'create_shipments' => 'Create Shipments',
             'edit_shipments' => 'Edit/Update Status',
@@ -97,7 +98,6 @@ class Role extends Model
             'view_logistics_reports' => 'View Logistics Reports',
             'view_employee_reports' => 'View Employee Reports',
             'view_purchase_reports' => 'View Purchase Reports',
-            'view_attendance_reports' => 'View Attendance Reports',
 
             // EMI & Payments
             'view_emi' => 'View EMI Plans',
@@ -107,10 +107,14 @@ class Role extends Model
 
             // System Management
             'manage_users' => 'Manage Users',
-            'manage_roles' => 'Manage Roles',
+            'manage_roles' => 'Manage Roles (Full Access)',
+            'create_roles' => 'Create Roles',
+            'edit_roles' => 'Edit Roles',
+            'delete_roles' => 'Delete Roles',
             'manage_settings' => 'Manage App Settings',
             'view_approvals' => 'View Approvals',
             'manage_approvals' => 'Manage Approvals',
+            'woocommerce_access' => 'WooCommerce Access',
         ];
     }
 

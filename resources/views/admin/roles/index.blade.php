@@ -451,7 +451,7 @@
         {{-- Page Header --}}
         <div class="page-header">
             <h1 class="page-title">👥 Role Management</h1>
-            @if(auth()->user()->hasPermission('create_roles'))
+            @if(auth()->user()->role === 'admin' || auth()->user()->hasPermission('create_roles'))
                 <a href="{{ route('admin.roles.create') }}" class="btn-create">
                     <i class="fas fa-plus"></i> Create New Role
                 </a>
@@ -519,23 +519,19 @@
                     </div>
                     @if ($defaultRoles['staff'])
                         <div class="assignment-actions">
-                            @if(auth()->user()->hasPermission('edit_roles'))
-                                <a href="{{ route('admin.roles.edit', $defaultRoles['staff']) }}" class="btn-assignment-edit">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                            @endif
-                            @if(auth()->user()->hasPermission('delete_roles'))
-                                <form action="{{ route('admin.roles.destroy', $defaultRoles['staff']) }}" method="POST"
-                                    style="flex: 1;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-assignment-delete"
-                                        onclick="return confirm('Are you sure you want to delete this role?');"
-                                        style="width: 100%;">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </form>
-                            @endif
+                            <a href="{{ route('admin.roles.edit', $defaultRoles['staff']) }}" class="btn-assignment-edit">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <form action="{{ route('admin.roles.destroy', $defaultRoles['staff']) }}" method="POST"
+                                style="flex: 1;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-assignment-delete"
+                                    onclick="return confirm('Are you sure you want to delete this role?');"
+                                    style="width: 100%;">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
                         </div>
                     @else
                         <div class="info-box">
@@ -562,23 +558,19 @@
                     </div>
                     @if ($defaultRoles['hr'])
                         <div class="assignment-actions">
-                            @if(auth()->user()->hasPermission('edit_roles'))
-                                <a href="{{ route('admin.roles.edit', $defaultRoles['hr']) }}" class="btn-assignment-edit">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                            @endif
-                            @if(auth()->user()->hasPermission('delete_roles'))
-                                <form action="{{ route('admin.roles.destroy', $defaultRoles['hr']) }}" method="POST"
-                                    style="flex: 1;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-assignment-delete"
-                                        onclick="return confirm('Are you sure you want to delete this role?');"
-                                        style="width: 100%;">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </form>
-                            @endif
+                            <a href="{{ route('admin.roles.edit', $defaultRoles['hr']) }}" class="btn-assignment-edit">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <form action="{{ route('admin.roles.destroy', $defaultRoles['hr']) }}" method="POST"
+                                style="flex: 1;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-assignment-delete"
+                                    onclick="return confirm('Are you sure you want to delete this role?');"
+                                    style="width: 100%;">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
                         </div>
                     @else
                         <div class="info-box">
@@ -605,24 +597,20 @@
                     </div>
                     @if ($defaultRoles['delivery_agent'])
                         <div class="assignment-actions">
-                            @if(auth()->user()->hasPermission('edit_roles'))
-                                <a href="{{ route('admin.roles.edit', $defaultRoles['delivery_agent']) }}"
-                                    class="btn-assignment-edit">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                            @endif
-                            @if(auth()->user()->hasPermission('delete_roles'))
-                                <form action="{{ route('admin.roles.destroy', $defaultRoles['delivery_agent']) }}"
-                                    method="POST" style="flex: 1;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-assignment-delete"
-                                        onclick="return confirm('Are you sure you want to delete this role?');"
-                                        style="width: 100%;">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </form>
-                            @endif
+                            <a href="{{ route('admin.roles.edit', $defaultRoles['delivery_agent']) }}"
+                                class="btn-assignment-edit">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <form action="{{ route('admin.roles.destroy', $defaultRoles['delivery_agent']) }}"
+                                method="POST" style="flex: 1;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-assignment-delete"
+                                    onclick="return confirm('Are you sure you want to delete this role?');"
+                                    style="width: 100%;">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
                         </div>
                     @else
                         <div class="info-box">
@@ -642,9 +630,9 @@
         <h2 class="section-heading" style="margin-top: 40px; margin-bottom: 24px;">
             🎨 Custom Roles
         </h2>
-        @if ($roles->count() > 0)
+        @if (count($roles) > 0)
             <div class="roles-grid">
-                @forelse ($roles as $role)
+                @foreach ($roles as $role)
                     <div class="role-card">
                         {{-- Role Header --}}
                         <div class="role-header">
@@ -686,36 +674,24 @@
 
                         {{-- Actions --}}
                         <div class="role-actions">
-                            @if(auth()->user()->hasPermission('edit_roles'))
-                                <a href="{{ route('admin.roles.edit', $role) }}" class="btn-edit">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                            @endif
-                            @if(auth()->user()->hasPermission('delete_roles'))
-                                <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" style="flex: 1;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-delete" style="width: 100%;"
-                                        onclick="return confirm('Are you sure you want to delete this role?');">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </form>
-                            @endif
+                            <a href="{{ route('admin.roles.edit', $role) }}" class="btn-edit">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" style="flex: 1;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-delete" style="width: 100%;"
+                                    onclick="return confirm('Are you sure you want to delete this role?');">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
                         </div>
                     </div>
-                @empty
-                    <div class="empty-state" style="grid-column: 1 / -1;">
-                        <div class="empty-state-icon">📋</div>
-                        <p class="empty-state-text">No roles found. Create your first role to get started!</p>
-                        <a href="{{ route('admin.roles.create') }}" class="btn-create">
-                            <i class="fas fa-plus"></i> Create First Role
-                        </a>
-                    </div>
-                @endforelse
+                @endforeach
             </div>
 
             {{-- Pagination --}}
-            @if ($roles->hasPages())
+            @if (method_exists($roles, 'hasPages') && $roles->hasPages())
                 <div style="margin-top: 30px; display: flex; justify-content: center;">
                     {{ $roles->links() }}
                 </div>

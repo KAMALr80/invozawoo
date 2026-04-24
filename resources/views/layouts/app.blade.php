@@ -1477,6 +1477,33 @@
 </head>
 
 <body>
+    {{-- Impersonation Alert Banner --}}
+    @if(session()->has('impersonator_id'))
+        <div class="impersonation-banner animate__animated animate__fadeInDown">
+            <div class="banner-content">
+                <i class="fas fa-user-secret me-2"></i>
+                <span>Viewing as <strong>{{ auth()->user()->name }}</strong> (Staff Mode)</span>
+                <a href="{{ route('admin.users.access.stop') }}" class="btn-return-admin">
+                    <i class="fas fa-undo-alt me-1"></i> Return to Admin Control
+                </a>
+            </div>
+        </div>
+        <style>
+            .impersonation-banner {
+                background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
+                color: white; padding: 10px 0; text-align: center;
+                border-bottom: 2px solid #0ea5e9; position: sticky; top: 0; z-index: 9999;
+            }
+            .banner-content { display: flex; align-items: center; justify-content: center; gap: 15px; font-size: 14px; }
+            .btn-return-admin {
+                background: #0ea5e9; color: white; padding: 4px 12px; border-radius: 6px;
+                text-decoration: none; font-weight: 800; font-size: 12px;
+                transition: 0.3s; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
+            }
+            .btn-return-admin:hover { background: #0284c7; transform: translateY(-1px); color: white; }
+        </style>
+    @endif
+
     {{-- ================= OMNI-SEARCH MODAL ================= --}}
     <div id="omniSearchModal" class="omni-search-modal">
         <div class="omni-search-backdrop" onclick="closeOmniSearch()"></div>
@@ -1621,6 +1648,18 @@
                         @if (auth()->user()->hasPermission('view_employee_reports'))
                             <a href="{{ route('reports.employees') }}" class="dropdown-item"><i class="fas fa-user-clock"></i> Employees</a>
                         @endif
+                        @if (auth()->user()->hasPermission('view_logistics_reports'))
+                            <a href="{{ route('reports.logistics') }}" class="dropdown-item"><i class="fas fa-truck-moving"></i> Logistics</a>
+                        @endif
+                        @if (auth()->user()->hasPermission('view_purchase_reports'))
+                            <a href="{{ route('reports.purchases') }}" class="dropdown-item"><i class="fas fa-shopping-cart"></i> Purchases</a>
+                        @endif
+                        @if (auth()->user()->hasPermission('view_attendance_reports'))
+                            <a href="{{ route('reports.attendance') }}" class="dropdown-item"><i class="fas fa-calendar-check"></i> Attendance</a>
+                        @endif
+                        @if (auth()->user()->role === 'admin')
+                            <a href="{{ route('reports.financial') }}" class="dropdown-item"><i class="fas fa-file-invoice-dollar"></i> Financial</a>
+                        @endif
                     </ul>
                 </div>
             @endif
@@ -1667,22 +1706,67 @@
                 </a>
             @endif
 
+            {{-- 8. Inventory Dropdown --}}
             @if (auth()->user()->hasPermission('view_inventory'))
-                <a href="{{ route('inventory.index') }}" class="nav-link {{ request()->routeIs('inventory*') ? 'active' : '' }}">
-                    <i class="fas fa-warehouse nav-icon"></i> <span>Inventory</span>
-                </a>
+                <div class="nav-item">
+                    <button class="nav-link" onclick="toggleDropdown('inventoryDropdown')" id="inventoryBtn">
+                        <i class="fas fa-warehouse nav-icon"></i>
+                        <span>Inventory</span>
+                        <i class="fas fa-chevron-right dropdown-icon" id="inventoryIcon"></i>
+                    </button>
+                    <ul class="dropdown-menu" id="inventoryDropdown">
+                        <a href="{{ route('inventory.index') }}" class="dropdown-item">
+                            <i class="fas fa-boxes"></i> All Products
+                        </a>
+                        <a href="{{ route('inventory.create') }}" class="dropdown-item">
+                            <i class="fas fa-plus-circle"></i> Add Product
+                        </a>
+                        <a href="{{ route('inventory.index') }}?stock=low" class="dropdown-item">
+                            <i class="fas fa-exclamation-triangle"></i> Low Stock
+                        </a>
+                    </ul>
+                </div>
             @endif
 
+            {{-- 9. Customers Dropdown --}}
             @if (auth()->user()->hasPermission('view_customers'))
-                <a href="{{ route('customers.index') }}" class="nav-link {{ request()->routeIs('customers*') ? 'active' : '' }}">
-                    <i class="fas fa-address-book nav-icon"></i> <span>Customers</span>
-                </a>
+                <div class="nav-item">
+                    <button class="nav-link" onclick="toggleDropdown('customersDropdown')" id="customersBtn">
+                        <i class="fas fa-address-book nav-icon"></i>
+                        <span>Customers</span>
+                        <i class="fas fa-chevron-right dropdown-icon" id="customersIcon"></i>
+                    </button>
+                    <ul class="dropdown-menu" id="customersDropdown">
+                        <a href="{{ route('customers.index') }}" class="dropdown-item">
+                            <i class="fas fa-users"></i> All Customers
+                        </a>
+                        <a href="{{ route('customers.create') }}" class="dropdown-item">
+                            <i class="fas fa-user-plus"></i> Add Customer
+                        </a>
+                    </ul>
+                </div>
             @endif
 
+            {{-- 10. Sales Dropdown --}}
             @if (auth()->user()->hasPermission('view_sales'))
-                <a href="{{ route('sales.index') }}" class="nav-link {{ request()->routeIs('sales*') ? 'active' : '' }}">
-                    <i class="fas fa-hand-holding-usd nav-icon"></i> <span>Sales</span>
-                </a>
+                <div class="nav-item">
+                    <button class="nav-link" onclick="toggleDropdown('salesDropdown')" id="salesBtn">
+                        <i class="fas fa-hand-holding-usd nav-icon"></i>
+                        <span>Sales Hub</span>
+                        <i class="fas fa-chevron-right dropdown-icon" id="salesIcon"></i>
+                    </button>
+                    <ul class="dropdown-menu" id="salesDropdown">
+                        <a href="{{ route('sales.index') }}" class="dropdown-item">
+                            <i class="fas fa-list-ul"></i> All Sales
+                        </a>
+                        <a href="{{ route('sales.create') }}" class="dropdown-item">
+                            <i class="fas fa-cash-register"></i> New POS Sale
+                        </a>
+                        <a href="{{ route('sales.index') }}?status=pending" class="dropdown-item">
+                            <i class="fas fa-hourglass-half"></i> Pending Orders
+                        </a>
+                    </ul>
+                </div>
             @endif
 
             @if (auth()->user()->hasPermission('view_attendance'))

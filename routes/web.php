@@ -335,6 +335,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/attendance', [ReportController::class, 'attendance'])->name('attendance')->middleware('permission:view_attendance_reports');
         Route::get('/attendance/excel', [ReportController::class, 'exportAttendanceCSV'])->name('attendance.excel')->middleware('permission:export_attendance');
         Route::get('/attendance/pdf', [ReportController::class, 'exportAttendancePDF'])->name('attendance.pdf')->middleware('permission:export_attendance');
+        Route::get('/customers', [ReportController::class, 'customers'])->name('customers')->middleware('permission:view_customers_reports');
     });
 
     /* ================= AI ================= */
@@ -614,6 +615,7 @@ Route::prefix('agent')->name('agent.')->middleware(['auth', 'role:delivery_agent
     // Dashboard
     Route::get('/dashboard', [AgentDashboardController::class, 'index'])->name('dashboard');
     Route::post('/status', [AgentDashboardController::class, 'updateStatus'])->name('status');
+    Route::get('/stats', [AgentDashboardController::class, 'getStats'])->name('stats');
 
     // ========== DELIVERIES COLLECTION ==========
     Route::prefix('deliveries')->name('deliveries.')->group(function () {
@@ -622,42 +624,46 @@ Route::prefix('agent')->name('agent.')->middleware(['auth', 'role:delivery_agent
         Route::get('/assigned', [AgentDeliveryController::class, 'assigned'])->name('assigned');
         Route::post('/bulk-start', [AgentDeliveryController::class, 'bulkStart'])->name('bulk-start');
         Route::get('/statistics', [AgentDeliveryController::class, 'statistics'])->name('statistics');
+        Route::get('/check-new', [AgentDeliveryController::class, 'checkNewAssignments'])->name('check-new');
     });
 
     // ========== SINGLE DELIVERY ACTIONS ==========
     Route::prefix('delivery')->name('delivery.')->group(function () {
         Route::get('/{shipmentId}', [AgentDeliveryController::class, 'show'])->name('show');
-        Route::post('/{shipmentId}/start', [AgentDeliveryController::class, 'start'])->name('start');
+        Route::get('/{shipmentId}/start', [AgentDeliveryController::class, 'start'])->name('start');
         Route::post('/{shipmentId}/complete', [AgentDeliveryController::class, 'complete'])->name('complete');
         Route::post('/{shipmentId}/status', [AgentDeliveryController::class, 'updateStatus'])->name('update-status');
         Route::get('/{shipmentId}/details', [AgentDeliveryController::class, 'details'])->name('details');
     });
 
-    // ========== TRACKING (LIVE TRACKING WITH DUAL MARKERS) ==========
+    // ========== TRACKING & LOCATION ==========
     Route::prefix('tracking')->name('tracking.')->group(function () {
         Route::get('/{shipmentId}', [AgentTrackingController::class, 'live'])->name('live');
         Route::get('/{shipmentId}/map', [AgentTrackingController::class, 'map'])->name('map');
         Route::post('/location', [AgentTrackingController::class, 'updateLocation'])->name('location.update');
+        // Add alias for backward compatibility or simpler naming
+        Route::post('/update-location', [AgentTrackingController::class, 'updateLocation'])->name('update-location');
+        Route::get('/current', [AgentTrackingController::class, 'getCurrentLocation'])->name('current');
+        Route::get('/history', [AgentDashboardController::class, 'getLocationHistory'])->name('location.history');
     });
+    
+    // Add a global alias that the dashboard is looking for
+    Route::post('/location/update', [AgentTrackingController::class, 'updateLocation'])->name('location.update');
 
     // ========== PERFORMANCE ==========
     Route::prefix('performance')->name('performance.')->group(function () {
         Route::get('/', [AgentPerformanceController::class, 'index'])->name('index');
-        Route::get('/weekly', [AgentPerformanceController::class, 'weekly'])->name('weekly');
-        Route::get('/monthly', [AgentPerformanceController::class, 'monthly'])->name('monthly');
-        Route::get('/export', [AgentPerformanceController::class, 'export'])->name('export');
     });
-
-    // Backward compatibility route alias
-    Route::get('/performance', [AgentPerformanceController::class, 'index'])->name('performance');
 
     // ========== EARNINGS ==========
     Route::prefix('earnings')->name('earnings.')->group(function () {
         Route::get('/', [AgentEarningsController::class, 'index'])->name('index');
-        Route::get('/details', [AgentEarningsController::class, 'details'])->name('details');
-        Route::get('/export', [AgentEarningsController::class, 'export'])->name('export');
-        Route::get('/invoice', [AgentEarningsController::class, 'invoice'])->name('invoice');
+        // Add alias
+        Route::get('/view', [AgentEarningsController::class, 'index'])->name('view');
     });
+    
+    // Global alias for earnings
+    Route::get('/earnings', [AgentEarningsController::class, 'index'])->name('earnings');
 
     // ========== PROFILE ==========
     Route::prefix('profile')->name('profile.')->group(function () {
@@ -698,154 +704,7 @@ Route::prefix('api/admin')->name('api.admin.')->middleware(['auth', 'role:admin'
 
 
 
-Route::prefix('agent')->name('agent.')->middleware(['auth', 'role:delivery_agent', 'logistics.enabled'])->group(function () {
 
-    // ========== LOCATION ROUTES ==========
-    Route::get('location/current', [App\Http\Controllers\Agent\TrackingController::class, 'getCurrentLocation'])->name('location.current');
-    Route::post('location/update', [App\Http\Controllers\Agent\TrackingController::class, 'updateLocation'])->name('location.update');
-
-    // ========== DELIVERIES ROUTES ==========
-    Route::get('deliveries/check-new', [App\Http\Controllers\Agent\DeliveryController::class, 'checkNewAssignments'])->name('deliveries.check-new');
-    Route::get('deliveries/statistics', [App\Http\Controllers\Agent\DeliveryController::class, 'statistics'])->name('deliveries.statistics');
-
-    // ========== ACTIVE DELIVERIES ==========
-    Route::get('deliveries/active', [App\Http\Controllers\Agent\DeliveryController::class, 'active'])->name('deliveries.active');
-
-    // ... other existing routes ...
-});
-
-Route::prefix('agent')->name('agent.')->middleware(['auth', 'role:delivery_agent', 'logistics.enabled'])->group(function () {
-    // ... other routes ...
-
-    Route::post('deliveries/check-new', [App\Http\Controllers\Agent\DeliveryController::class, 'checkNewAssignments'])->name('deliveries.check-new');
-});
-
-
-Route::prefix('agent')->name('agent.')->middleware(['auth', 'role:delivery_agent', 'logistics.enabled'])->group(function () {
-    // Dashboard
-    Route::get('dashboard', [App\Http\Controllers\Agent\DashboardController::class, 'index'])->name('dashboard');
-    Route::post('status', [App\Http\Controllers\Agent\DashboardController::class, 'updateStatus'])->name('status');
-    Route::get('stats', [App\Http\Controllers\Agent\DashboardController::class, 'getStats'])->name('stats');
-    Route::get('location-history', [App\Http\Controllers\Agent\DashboardController::class, 'getLocationHistory'])->name('location.history');
-
-    // ... other routes
-});
-Route::get('/agent/performance', [AgentPerformanceController::class, 'index'])->name('agent.performance.index');
-
-
-Route::prefix('agent')->name('agent.')->middleware(['auth', 'role:delivery_agent', 'logistics.enabled'])->group(function () {
-
-    // ========== DASHBOARD ==========
-    Route::get('dashboard', [App\Http\Controllers\Agent\DashboardController::class, 'index'])->name('dashboard');
-    Route::post('status', [App\Http\Controllers\Agent\DashboardController::class, 'updateStatus'])->name('status');
-
-    // ========== EARNINGS ROUTES ==========
-    Route::prefix('earnings')->name('earnings.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Agent\EarningsController::class, 'index'])->name('index');
-        Route::get('export', [App\Http\Controllers\Agent\EarningsController::class, 'export'])->name('export');
-        Route::get('invoice', [App\Http\Controllers\Agent\EarningsController::class, 'invoice'])->name('invoice');
-        Route::get('details', [App\Http\Controllers\Agent\EarningsController::class, 'details'])->name('details');
-    });
-
-    // ✅ Legacy route for backward compatibility
-    Route::get('earnings', [App\Http\Controllers\Agent\EarningsController::class, 'index'])->name('earnings');
-
-    // ========== OTHER AGENT ROUTES ==========
-    // ... (your existing agent routes)
-});
-
-
-Route::prefix('agent')->name('agent.')->middleware(['auth', 'role:delivery_agent', 'logistics.enabled'])->group(function () {
-
-    // ========== DASHBOARD ==========
-    Route::get('dashboard', [App\Http\Controllers\Agent\DashboardController::class, 'index'])->name('dashboard');
-    Route::post('status', [App\Http\Controllers\Agent\DashboardController::class, 'updateStatus'])->name('status');
-
-    // ========== PROFILE ROUTES ==========
-    Route::prefix('profile')->name('profile.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Agent\ProfileController::class, 'edit'])->name('edit');
-        Route::put('/', [App\Http\Controllers\Agent\ProfileController::class, 'update'])->name('update');
-        Route::post('location', [App\Http\Controllers\Agent\ProfileController::class, 'updateLocation'])->name('update-location');
-    });
-    // ✅ Legacy route for backward compatibility
-    Route::get('profile', [App\Http\Controllers\Agent\ProfileController::class, 'edit'])->name('profile');
-    Route::put('profile', [App\Http\Controllers\Agent\ProfileController::class, 'update'])->name('profile.update');
-
-    // ========== EARNINGS ROUTES ==========
-    Route::prefix('earnings')->name('earnings.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Agent\EarningsController::class, 'index'])->name('index');
-        Route::get('export', [App\Http\Controllers\Agent\EarningsController::class, 'export'])->name('export');
-        Route::get('invoice', [App\Http\Controllers\Agent\EarningsController::class, 'invoice'])->name('invoice');
-        Route::get('details', [App\Http\Controllers\Agent\EarningsController::class, 'details'])->name('details');
-    });
-    Route::get('earnings', [App\Http\Controllers\Agent\EarningsController::class, 'index'])->name('earnings');
-
-    // ========== DELIVERY ROUTES ==========
-    // ... (your existing delivery routes)
-});
-
-
-Route::prefix('agent')->name('agent.')->middleware(['auth', 'role:delivery_agent', 'logistics.enabled'])->group(function () {
-
-    // ========== DASHBOARD ==========
-    Route::get('dashboard', [App\Http\Controllers\Agent\DashboardController::class, 'index'])->name('dashboard');
-    Route::post('status', [App\Http\Controllers\Agent\DashboardController::class, 'updateStatus'])->name('status');
-
-    // ========== SUPPORT ROUTES ==========
-    Route::prefix('support')->name('support.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Agent\SupportController::class, 'index'])->name('index');
-        Route::post('send', [App\Http\Controllers\Agent\SupportController::class, 'send'])->name('send');
-    });
-    // ✅ Legacy route for backward compatibility
-    Route::get('support', [App\Http\Controllers\Agent\SupportController::class, 'index'])->name('support');
-    Route::post('support', [App\Http\Controllers\Agent\SupportController::class, 'send'])->name('support.send');
-
-    // ========== PROFILE ROUTES ==========
-    Route::prefix('profile')->name('profile.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Agent\ProfileController::class, 'edit'])->name('edit');
-        Route::put('/', [App\Http\Controllers\Agent\ProfileController::class, 'update'])->name('update');
-        Route::post('location', [App\Http\Controllers\Agent\ProfileController::class, 'updateLocation'])->name('update-location');
-    });
-    Route::get('profile', [App\Http\Controllers\Agent\ProfileController::class, 'edit'])->name('profile');
-    Route::put('profile', [App\Http\Controllers\Agent\ProfileController::class, 'update'])->name('profile.update');
-
-    // ========== EARNINGS ROUTES ==========
-    Route::prefix('earnings')->name('earnings.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Agent\EarningsController::class, 'index'])->name('index');
-        Route::get('export', [App\Http\Controllers\Agent\EarningsController::class, 'export'])->name('export');
-        Route::get('invoice', [App\Http\Controllers\Agent\EarningsController::class, 'invoice'])->name('invoice');
-        Route::get('details', [App\Http\Controllers\Agent\EarningsController::class, 'details'])->name('details');
-    });
-    Route::get('earnings', [App\Http\Controllers\Agent\EarningsController::class, 'index'])->name('earnings');
-
-    // ========== PERFORMANCE ROUTES ==========
-    Route::prefix('performance')->name('performance.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Agent\PerformanceController::class, 'index'])->name('index');
-        Route::get('weekly', [App\Http\Controllers\Agent\PerformanceController::class, 'weekly'])->name('weekly');
-        Route::get('monthly', [App\Http\Controllers\Agent\PerformanceController::class, 'monthly'])->name('monthly');
-        Route::get('export', [App\Http\Controllers\Agent\PerformanceController::class, 'export'])->name('export');
-    });
-    Route::get('performance', [App\Http\Controllers\Agent\PerformanceController::class, 'index'])->name('performance');
-
-});
-
-Route::prefix('agent')->name('agent.')->middleware(['auth', 'role:delivery_agent'])->group(function () {
-
-    // ========== PERFORMANCE ROUTES ==========
-    Route::prefix('performance')->name('performance.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Agent\PerformanceController::class, 'index'])->name('index');
-        Route::get('weekly', [App\Http\Controllers\Agent\PerformanceController::class, 'weekly'])->name('weekly');
-        Route::get('monthly', [App\Http\Controllers\Agent\PerformanceController::class, 'monthly'])->name('monthly');
-        Route::get('export', [App\Http\Controllers\Agent\PerformanceController::class, 'export'])->name('export');
-    });
-
-    // ✅ IMPORTANT: Add both route names for backward compatibility
-    Route::get('performance', [App\Http\Controllers\Agent\PerformanceController::class, 'index'])->name('performance');
-    Route::get('performance', [App\Http\Controllers\Agent\PerformanceController::class, 'index'])->name('performance.index');
-
-    // ========== OTHER ROUTES ==========
-    // ... (your other routes)
-});
 
 
 Route::middleware('auth')->prefix('reports')->name('reports.')->group(function () {
@@ -894,66 +753,7 @@ Route::middleware('auth')->prefix('reports')->name('reports.')->group(function (
 });
 
 
-// Customer Reports Routes
-Route::prefix('reports')->name('reports.')->group(function () {
-    Route::get('/customers', [ReportController::class, 'customerReport'])->name('customers');
-    Route::get('/customers/export/csv', [ReportController::class, 'exportCustomerReportCSV'])->name('customers.excel');
-    Route::get('/customers/export/pdf', [ReportController::class, 'exportCustomerReportPDF'])->name('customers.pdf');
-    Route::get('/customer-sales', [ReportController::class, 'customerSalesReport'])->name('customer.sales');
-    Route::get('/customer-sales/export/csv', [ReportController::class, 'exportCustomerSalesReportCSV'])->name('customer.sales.excel');
-});
 
-
-
-Route::prefix('reports')->name('reports.')->group(function () {
-    Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
-    Route::get('/sales/export/csv', [ReportController::class, 'exportSalesCSV'])->name('sales.excel');
-    // ... other routes
-});
-
-
-
-Route::prefix('reports')->name('reports.')->group(function () {
-    // Sales Report
-    Route::get('/sales', [ReportController::class, 'salesReport'])->name('sales');
-    Route::get('/sales/export/csv', [ReportController::class, 'exportSalesReportCSV'])->name('sales.excel');
-    Route::get('/sales/export/pdf', [ReportController::class, 'exportSalesReportPDF'])->name('sales.pdf');
-
-    // Customer Report
-    Route::get('/customers', [ReportController::class, 'customerReport'])->name('customers');
-    Route::get('/customers/export/csv', [ReportController::class, 'exportCustomerReportCSV'])->name('customers.excel');
-    Route::get('/customers/export/pdf', [ReportController::class, 'exportCustomerReportPDF'])->name('customers.pdf');
-
-    // Customer Sales Report
-    Route::get('/customer-sales', [ReportController::class, 'customerSalesReport'])->name('customer.sales');
-    Route::get('/customer-sales/export/csv', [ReportController::class, 'exportCustomerSalesReportCSV'])->name('customer.sales.excel');
-    Route::get('/customer-sales/export/pdf', [ReportController::class, 'exportCustomerSalesReportPDF'])->name('customer.sales.pdf');
-
-    // Other reports
-    Route::get('/inventory', [ReportController::class, 'inventory'])->name('inventory');
-    Route::get('/inventory/export/csv', [ReportController::class, 'exportInventoryCSV'])->name('inventory.excel');
-    Route::get('/inventory/export/pdf', [ReportController::class, 'exportInventoryPDF'])->name('inventory.pdf');
-
-    Route::get('/logistics', [ReportController::class, 'logistics'])->name('logistics');
-    Route::get('/logistics/export/csv', [ReportController::class, 'exportLogisticsCSV'])->name('logistics.excel');
-    Route::get('/logistics/export/pdf', [ReportController::class, 'exportLogisticsPDF'])->name('logistics.pdf');
-
-    Route::get('/employees', [ReportController::class, 'employees'])->name('employees');
-    Route::get('/employees/export/csv', [ReportController::class, 'exportEmployeesCSV'])->name('employees.excel');
-    Route::get('/employees/export/pdf', [ReportController::class, 'exportEmployeesPDF'])->name('employees.pdf');
-
-    Route::get('/purchases', [ReportController::class, 'purchases'])->name('purchases');
-    Route::get('/purchases/export/csv', [ReportController::class, 'exportPurchasesCSV'])->name('purchases.excel');
-    Route::get('/purchases/export/pdf', [ReportController::class, 'exportPurchasesPDF'])->name('purchases.pdf');
-
-    Route::get('/attendance', [ReportController::class, 'attendance'])->name('attendance');
-    Route::get('/attendance/export/csv', [ReportController::class, 'exportAttendanceCSV'])->name('attendance.excel');
-    Route::get('/attendance/export/pdf', [ReportController::class, 'exportAttendancePDF'])->name('attendance.pdf');
-
-    Route::get('/financial', [ReportController::class, 'financial'])->name('financial');
-    Route::get('/financial/export/csv', [ReportController::class, 'exportFinancialCSV'])->name('financial.excel');
-    Route::get('/financial/export/pdf', [ReportController::class, 'exportFinancialPDF'])->name('financial.pdf');
-});
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/staff/dashboard', [App\Http\Controllers\DashboardController::class, 'staffDashboard'])->name('staff.dashboard');
@@ -1023,10 +823,12 @@ Route::middleware(['auth'])->group(function () {
     /* ================= WOOCOMMERCE ROUTES ================= */
     Route::prefix('woocommerce')->name('woocommerce.')->group(function () {
         Route::get('/', [WoocommerceController::class, 'index'])->name('index');
+        Route::get('/products', [WoocommerceController::class, 'products'])->name('products');
         Route::get('/settings', [WoocommerceController::class, 'settings'])->name('settings');
         Route::post('/settings', [WoocommerceController::class, 'updateSettings'])->name('settings.update');
         Route::post('/settings/test', [WoocommerceController::class, 'testConnection'])->name('settings.test');
         Route::post('/sync/products', [WoocommerceController::class, 'syncProducts'])->name('sync.products');
+        Route::post('/sync/single/{id}', [WoocommerceController::class, 'syncSingleProduct'])->name('sync.single');
     });
 });
 

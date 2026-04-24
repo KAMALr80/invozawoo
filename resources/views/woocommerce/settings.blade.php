@@ -1,134 +1,143 @@
 @extends('layouts.app')
 
-@section('page-title', 'Woocommerce Settings')
+@section('page-title', 'Bridge Configuration')
 
 @section('content')
-<div class="wc-elite-interface settings-mode">
-    <div class="glass-bg"></div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <div class="content-wrapper p-lg-5 p-3">
+<div class="wc-elite-v2 settings-mode">
+    <div class="aurora-bg"></div>
+    
+    <div class="container-fluid p-lg-5 p-3">
         {{-- Elite Header --}}
-        <header class="d-flex justify-content-between align-items-end mb-5 animate__animated animate__fadeIn">
-            <div>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-2">
-                        <li class="breadcrumb-item"><a href="{{ route('woocommerce.index') }}" class="text-indigo fw-bold">Console</a></li>
-                        <li class="breadcrumb-item active">Infrastructure</li>
-                    </ol>
-                </nav>
-                <h1 class="display-6 fw-900 mb-0">Bridge <span class="text-indigo">Configuration</span></h1>
+        <header class="d-flex justify-content-between align-items-center mb-5 animate__animated animate__fadeIn">
+            <div class="d-flex align-items-center">
+                <a href="{{ route('woocommerce.index') }}" class="btn-back-elite me-4">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="display-6 fw-900 mb-1 text-white">Bridge <span class="text-indigo-glow">Infrastructure</span></h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="{{ route('woocommerce.index') }}" class="text-muted text-decoration-none">Architect</a></li>
+                            <li class="breadcrumb-item active text-indigo-glow fw-bold">Configuration</li>
+                        </ol>
+                    </nav>
+                </div>
             </div>
-            <div class="header-status">
-                <div class="badge-elite outline">v3.8.0 Stable</div>
+            
+            <div class="header-actions">
+                <div class="badge-status-glow">
+                    <span class="status-dot"></span> Secure Tunnel Active
+                </div>
             </div>
         </header>
 
         <div class="row g-5">
             {{-- Navigation Pane --}}
             <div class="col-xl-3">
-                <div class="elite-sidebar-nav">
+                <div class="sidebar-config-glass animate__animated animate__fadeInLeft">
                     <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist">
-                        <button class="nav-elite-link active" data-bs-toggle="pill" data-bs-target="#tab-api">
-                            <i class="fas fa-key"></i>
-                            <div class="link-meta">
-                                <span class="title">API Ecosystem</span>
-                                <span class="desc">Keys & Endpoints</span>
+                        <button class="nav-elite-config active" data-bs-toggle="pill" data-bs-target="#tab-api">
+                            <i class="bi bi-hdd-network"></i>
+                            <div class="link-info">
+                                <span class="title">API Gateway</span>
+                                <span class="subtitle">Endpoints & Keys</span>
                             </div>
                         </button>
-                        <button class="nav-elite-link" data-bs-toggle="pill" data-bs-target="#tab-sync">
-                            <i class="fas fa-sync-alt"></i>
-                            <div class="link-meta">
-                                <span class="title">Sync Logic</span>
-                                <span class="desc">Behavior & Rules</span>
+                        <button class="nav-elite-config" data-bs-toggle="pill" data-bs-target="#tab-sync">
+                            <i class="bi bi-arrow-repeat"></i>
+                            <div class="link-info">
+                                <span class="title">Synchronization</span>
+                                <span class="subtitle">Logic & Intervals</span>
                             </div>
                         </button>
-                        <button class="nav-elite-link" data-bs-toggle="pill" data-bs-target="#tab-mapping">
-                            <i class="fas fa-project-diagram"></i>
-                            <div class="link-meta">
-                                <span class="title">Field Mapping</span>
-                                <span class="desc">Data Translation</span>
+                        <button class="nav-elite-config" data-bs-toggle="pill" data-bs-target="#tab-advanced">
+                            <i class="bi bi-shield-lock"></i>
+                            <div class="link-info">
+                                <span class="title">Advanced</span>
+                                <span class="subtitle">Security & Debug</span>
                             </div>
                         </button>
                     </div>
 
-                    <div class="sidebar-help mt-5">
-                        <div class="help-card-premium">
-                            <i class="fas fa-question-circle"></i>
-                            <h6>Need Assistance?</h6>
-                            <p>Our API architects are ready to help you scale.</p>
-                            <a href="#" class="btn-help">Open Docs</a>
+                    <div class="config-help-box mt-5">
+                        <div class="help-inner">
+                            <i class="bi bi-info-circle-fill text-indigo-glow"></i>
+                            <p class="small text-muted mb-0">Changes deployed here affect the real-time neural bridge. Proceed with caution.</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- Configuration Pane --}}
+            {{-- Form Pane --}}
             <div class="col-xl-9">
-                <div class="tab-content" id="v-pills-tabContent">
-                    {{-- API Tab --}}
+                <div class="tab-content animate__animated animate__fadeInUp">
                     <div class="tab-pane fade show active" id="tab-api">
-                        <div class="elite-form-card">
-                            <div class="form-header">
-                                <h4 class="fw-800">REST API Infrastructure</h4>
-                                <p class="text-muted">Establish the primary data bridge to your WooCommerce instance.</p>
+                        <div class="card-config-glass">
+                            <div class="card-header-elite">
+                                <h4 class="text-white fw-800 mb-2">Core API Credentials</h4>
+                                <p class="text-muted mb-0">Configure the primary REST API handshake parameters.</p>
                             </div>
 
-                            <form id="woocommerce-settings-form" action="{{ route('woocommerce.settings.update') }}" method="POST" class="p-0">
+                            <form action="{{ route('woocommerce.settings.update') }}" method="POST" id="configForm">
                                 @csrf
-                                <div class="row g-4 px-5 pb-5">
-                                    <div class="col-12">
-                                        <div class="elite-input-group-premium">
-                                            <label>App Base URL</label>
-                                            <div class="input-container">
-                                                <i class="fas fa-link"></i>
-                                                <input type="url" name="app_url" id="app_url" class="form-control" value="{{ $settings->app_url }}" placeholder="https://store.example.com">
+                                <div class="card-body-elite p-5">
+                                    <div class="row g-4">
+                                        <div class="col-12">
+                                            <div class="input-elite-group">
+                                                <label class="text-muted small fw-800 text-uppercase tracking-wider">WooCommerce Store URL</label>
+                                                <div class="input-wrapper">
+                                                    <i class="bi bi-link-45deg"></i>
+                                                    <input type="url" name="app_url" id="app_url" class="form-control-elite" value="{{ $settings->app_url }}" placeholder="https://yourstore.com" required>
+                                                </div>
+                                                <small class="text-muted-dim">The full URL including https:// (e.g., https://shop.example.com/)</small>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="elite-input-group-premium">
-                                            <label>Consumer Key</label>
-                                            <div class="input-container">
-                                                <i class="fas fa-shield-alt"></i>
-                                                <input type="text" name="consumer_key" id="consumer_key" class="form-control" value="{{ $settings->consumer_key }}" placeholder="ck_xxxxxxxxxxxxxxxx">
+                                        
+                                        <div class="col-md-6">
+                                            <div class="input-elite-group">
+                                                <label class="text-muted small fw-800 text-uppercase tracking-wider">Consumer Key</label>
+                                                <div class="input-wrapper">
+                                                    <i class="bi bi-key"></i>
+                                                    <input type="text" name="consumer_key" id="consumer_key" class="form-control-elite" value="{{ $settings->consumer_key }}" placeholder="ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" required>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="elite-input-group-premium">
-                                            <label>Consumer Secret</label>
-                                            <div class="input-container">
-                                                <i class="fas fa-lock"></i>
-                                                <input type="password" name="consumer_secret" id="consumer_secret" class="form-control" value="{{ $settings->consumer_secret }}" placeholder="cs_xxxxxxxxxxxxxxxx">
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div class="col-12 mt-5">
-                                        <div class="action-footer d-flex justify-content-between align-items-center">
-                                            <button type="button" id="btn-test-connection" class="btn-audit">
-                                                <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
-                                                <i class="fas fa-microscope me-2"></i> Audit Connection
-                                            </button>
-                                            <button type="submit" class="btn-deploy">
-                                                Deploy Changes <i class="fas fa-chevron-right ms-2"></i>
-                                            </button>
+                                        <div class="col-md-6">
+                                            <div class="input-elite-group">
+                                                <label class="text-muted small fw-800 text-uppercase tracking-wider">Consumer Secret</label>
+                                                <div class="input-wrapper">
+                                                    <i class="bi bi-shield-shaded"></i>
+                                                    <input type="password" name="consumer_secret" id="consumer_secret" class="form-control-elite" value="{{ $settings->consumer_secret }}" placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" required>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div class="card-footer-elite d-flex justify-content-between p-5">
+                                    <button type="button" id="btn-audit" class="btn-audit-elite">
+                                        <span class="spinner-border spinner-border-sm d-none me-2"></span>
+                                        <i class="bi bi-activity me-2"></i> Audit Neural Link
+                                    </button>
+                                    <button type="submit" class="btn-deploy-elite">
+                                        Deploy Configuration <i class="bi bi-cloud-upload ms-2"></i>
+                                    </button>
                                 </div>
                             </form>
                         </div>
                     </div>
 
-                    {{-- Mapping Tab Placeholder --}}
-                    <div class="tab-pane fade" id="tab-mapping">
-                        <div class="elite-form-card p-5 text-center">
-                            <div class="empty-state">
-                                <div class="icon-box-xl mx-auto mb-4">
-                                    <i class="fas fa-drafting-compass"></i>
-                                </div>
-                                <h4 class="fw-800">Advanced Mapping Engine</h4>
-                                <p class="text-muted">Currently using system default translations. Custom mapping will be enabled in v4.0</p>
+                    {{-- Placeholder tabs --}}
+                    <div class="tab-pane fade" id="tab-sync">
+                        <div class="card-config-glass p-5 text-center">
+                            <div class="py-5">
+                                <i class="bi bi-hourglass-split display-1 text-muted-dim mb-4"></i>
+                                <h4 class="text-white">Batch Engine Settings</h4>
+                                <p class="text-muted">Currently optimized for High Performance (50 items/batch). Advanced interval control coming in v4.1</p>
                             </div>
                         </div>
                     </div>
@@ -139,112 +148,123 @@
 </div>
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
 
-    .wc-elite-interface {
-        font-family: 'Inter', sans-serif;
-        background: #f8fafc;
-        min-height: 100vh;
-        position: relative;
-        color: #1e293b;
+    :root {
+        --indigo-primary: #6366f1;
+        --indigo-glow: #818cf8;
+        --dark-bg: #030712;
+        --glass-bg: rgba(17, 24, 39, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --text-muted-dim: #475569;
     }
 
-    .glass-bg {
+    .wc-elite-v2 {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background: var(--dark-bg);
+        min-height: 100vh;
+        color: #94a3b8;
+        position: relative;
+        overflow-x: hidden;
+    }
+
+    .aurora-bg {
         position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 40%);
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.1) 0%, transparent 40%),
+                    radial-gradient(circle at 0% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+        z-index: 0;
         pointer-events: none;
     }
 
     .fw-900 { font-weight: 900; }
-    .text-indigo { color: #6366f1 !important; }
+    .fw-800 { font-weight: 800; }
+    .text-indigo-glow { color: var(--indigo-glow) !important; }
 
-    /* Breadcrumbs */
-    .breadcrumb-item + .breadcrumb-item::before { content: "→"; color: #cbd5e1; }
-    .breadcrumb-item a { text-decoration: none; }
+    /* Header & Back Button */
+    .btn-back-elite {
+        width: 50px; height: 50px; border-radius: 15px;
+        background: var(--glass-bg); border: 1px solid var(--glass-border);
+        display: flex; align-items: center; justify-content: center;
+        color: white; text-decoration: none; transition: 0.3s;
+    }
+    .btn-back-elite:hover { background: rgba(255,255,255,0.1); color: var(--indigo-glow); transform: translateX(-5px); }
 
-    /* Nav Links */
-    .nav-elite-link {
-        background: transparent; border: none; padding: 20px 25px;
-        margin-bottom: 12px; border-radius: 20px; display: flex; align-items: center;
-        gap: 20px; text-align: left; transition: all 0.3s ease; width: 100%;
-        color: #64748b;
+    .badge-status-glow {
+        padding: 8px 16px; background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px;
+        color: #10b981; font-size: 12px; font-weight: 800;
+        display: flex; align-items: center; gap: 8px;
     }
-    .nav-elite-link i { font-size: 20px; opacity: 0.5; }
-    .nav-elite-link .title { display: block; font-weight: 800; font-size: 15px; }
-    .nav-elite-link .desc { font-size: 11px; opacity: 0.7; font-weight: 500; }
+    .status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981; }
 
-    .nav-elite-link.active {
-        background: white; color: #6366f1;
-        box-shadow: 0 10px 30px rgba(99, 102, 241, 0.1);
+    /* Sidebar Config */
+    .sidebar-config-glass {
+        background: var(--glass-bg); border: 1px solid var(--glass-border);
+        backdrop-filter: blur(20px); border-radius: 35px; padding: 25px;
     }
-    .nav-elite-link.active i { opacity: 1; }
+    .nav-elite-config {
+        background: transparent; border: none; padding: 20px;
+        margin-bottom: 10px; border-radius: 20px; display: flex; align-items: center;
+        gap: 15px; text-align: left; transition: 0.3s; width: 100%; color: #64748b;
+    }
+    .nav-elite-config i { font-size: 22px; }
+    .nav-elite-config .title { display: block; font-weight: 800; color: white; font-size: 15px; }
+    .nav-elite-config .subtitle { display: block; font-size: 11px; opacity: 0.6; }
+    
+    .nav-elite-config.active {
+        background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3);
+        color: var(--indigo-glow);
+    }
+    .nav-elite-config.active .title { color: var(--indigo-glow); }
 
-    /* Help Card */
-    .help-card-premium {
-        background: #0f172a; color: white; padding: 30px; border-radius: 30px;
-        position: relative; overflow: hidden;
-    }
-    .help-card-premium i { font-size: 40px; opacity: 0.1; position: absolute; right: -10px; bottom: -10px; }
-    .help-card-premium h6 { font-weight: 800; margin-bottom: 10px; }
-    .help-card-premium p { font-size: 12px; opacity: 0.6; line-height: 1.6; }
-    .btn-help {
-        display: inline-block; margin-top: 15px; color: #6366f1; font-weight: 800;
-        font-size: 12px; text-decoration: none; text-transform: uppercase; letter-spacing: 1px;
-    }
+    .config-help-box { padding: 20px; border-top: 1px solid var(--glass-border); }
 
-    /* Elite Form Card */
-    .elite-form-card {
-        background: white; border-radius: 40px; border: 1px solid #f1f5f9;
-        box-shadow: 0 40px 80px rgba(15, 23, 42, 0.03);
-        overflow: hidden;
+    /* Config Cards */
+    .card-config-glass {
+        background: var(--glass-bg); border: 1px solid var(--glass-border);
+        backdrop-filter: blur(20px); border-radius: 40px; overflow: hidden;
     }
-    .form-header { padding: 50px; background: #fcfdff; border-bottom: 1px solid #f1f5f9; margin-bottom: 50px; }
+    .card-header-elite { padding: 50px 50px 0; }
+    
+    .input-elite-group label { margin-bottom: 15px; }
+    .input-wrapper { position: relative; }
+    .input-wrapper i { position: absolute; left: 20px; top: 16px; color: #475569; font-size: 20px; }
+    .form-control-elite {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 2px solid var(--glass-border) !important;
+        color: white !important; padding: 15px 25px 15px 55px !important;
+        border-radius: 18px !important; transition: 0.3s !important;
+    }
+    .form-control-elite:focus { border-color: var(--indigo-glow) !important; box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.1) !important; }
 
-    .elite-input-group-premium label {
-        display: block; font-weight: 800; font-size: 12px; text-transform: uppercase;
-        color: #94a3b8; letter-spacing: 1px; margin-bottom: 12px;
+    /* Footer Actions */
+    .btn-audit-elite {
+        background: transparent; border: 1px solid var(--glass-border);
+        color: #94a3b8; padding: 15px 30px; border-radius: 18px;
+        font-weight: 800; font-size: 14px; transition: 0.3s;
     }
-    .input-container { position: relative; }
-    .input-container i { position: absolute; left: 22px; top: 18px; color: #cbd5e1; }
-    .input-container .form-control {
-        border: 2px solid #f1f5f9; padding: 16px 25px; padding-left: 55px;
-        border-radius: 20px; font-weight: 600; transition: all 0.3s ease;
-    }
-    .input-container .form-control:focus {
-        border-color: #6366f1; box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.05);
-    }
+    .btn-audit-elite:hover { background: rgba(255,255,255,0.05); color: white; border-color: white; }
 
-    /* Actions */
-    .btn-audit {
-        background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px 30px;
-        border-radius: 18px; font-weight: 700; color: #64748b; transition: 0.3s;
+    .btn-deploy-elite {
+        background: white; color: var(--dark-bg); border: none;
+        padding: 15px 40px; border-radius: 18px; font-weight: 900;
+        box-shadow: 0 10px 20px rgba(255,255,255,0.05); transition: 0.3s;
     }
-    .btn-audit:hover { background: #f1f5f9; color: #1e293b; border-color: #cbd5e1; }
-
-    .btn-deploy {
-        background: #0f172a; color: white; border: none; padding: 15px 40px;
-        border-radius: 18px; font-weight: 800; box-shadow: 0 10px 20px rgba(15, 23, 42, 0.2);
-        transition: 0.3s;
-    }
-    .btn-deploy:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(15, 23, 42, 0.3); }
-
-    .icon-box-xl {
-        width: 100px; height: 100px; background: #f5f3ff; color: #6366f1;
-        border-radius: 30px; display: flex; align-items: center; justify-content: center;
-        font-size: 40px;
-    }
+    .btn-deploy-elite:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(255,255,255,0.1); }
 </style>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('#btn-test-connection').click(function() {
+        $('#btn-audit').click(function() {
             const btn = $(this);
             const spinner = btn.find('.spinner-border');
+            const icon = btn.find('i');
             
             btn.prop('disabled', true);
             spinner.removeClass('d-none');
+            icon.addClass('d-none');
             
             $.ajax({
                 url: "{{ route('woocommerce.settings.test') }}",
@@ -256,14 +276,19 @@
                     consumer_secret: $('#consumer_secret').val()
                 },
                 success: function(response) {
-                    alert(response.message);
+                    if(response.success) {
+                        alert('✅ ' + response.message);
+                    } else {
+                        alert('❌ ' + response.message);
+                    }
                 },
                 error: function() {
-                    alert('An error occurred while auditing the connection.');
+                    alert('Critical Handshake Failure: Could not reach the bridge service.');
                 },
                 complete: function() {
                     btn.prop('disabled', false);
                     spinner.addClass('d-none');
+                    icon.removeClass('d-none');
                 }
             });
         });

@@ -12,13 +12,7 @@ class RoleController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        // Only allow admin to manage roles
-        $this->middleware(function ($request, $next) {
-            if (auth()->user()->role !== 'admin') {
-                abort(403, 'Unauthorized');
-            }
-            return $next($request);
-        });
+        $this->middleware('permission:manage_roles');
     }
 
     /**

@@ -7,6 +7,7 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\URL;
 use App\Services\AttendanceService;
 use App\Services\LeaveService;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,9 +39,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Force HTTPS in production (Render / Cloud hosting)
-        if (config('app.env') === 'production' || env('APP_FORCE_HTTPS', true)) {
+        //  if (config('app.env') === 'production' || env('APP_FORCE_HTTPS', true)) {
+        if (config('app.env') === 'production' || (env('APP_FORCE_HTTPS', false) && !app()->isLocal())) {
             URL::forceScheme('https');
         }
+
+        // Force Bootstrap 5 for Pagination
+        Paginator::useBootstrapFive();
 
         // Pass pending counts to sidebar
         view()->composer('layouts.app', function ($view) {
@@ -67,5 +72,6 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Employee::observe(\App\Observers\EmployeeObserver::class);
         \App\Models\Shipment::observe(\App\Observers\ShipmentObserver::class);
         \App\Models\Attendance::observe(\App\Observers\AttendanceObserver::class);
+        \App\Models\Product::observe(\App\Observers\ProductObserver::class);
     }
 }
