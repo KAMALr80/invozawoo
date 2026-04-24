@@ -57,21 +57,24 @@
             </div>
         </div>
 
-        <div class="row g-4 mb-5" style="display: flex !important; visibility: visible !important; opacity: 1 !important;">
+        <div class="row g-4 mb-5">
             {{-- Metrics Grid --}}
-            <div class="col-xl-8" style="display: block !important;">
+            <div class="col-xl-8">
                 <div class="row g-4">
                     <div class="col-md-6">
-                        <div class="metric-card-glass">
+                        <div class="metric-card-glass animate__animated animate__zoomIn" style="animation-delay: 0.1s">
                             <div class="card-icon indigo"><i class="bi bi-box-seam"></i></div>
                             <div class="card-info">
                                 <span class="label">Product Catalog</span>
                                 <h2 class="value text-white">{{ \App\Models\Product::count() }} <small>Items</small></h2>
                             </div>
+                            <div class="card-graph">
+                                <div class="sparkline"></div>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="metric-card-glass">
+                        <div class="metric-card-glass animate__animated animate__zoomIn" style="animation-delay: 0.2s">
                             <div class="card-icon emerald"><i class="bi bi-check2-circle"></i></div>
                             <div class="card-info">
                                 <span class="label">Last Sync Success</span>
@@ -81,7 +84,7 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <div class="analytics-card-glass p-5">
+                        <div class="analytics-card-glass p-5 animate__animated animate__fadeInUp">
                             <div class="row g-4">
                                 <div class="col-lg-8">
                                     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -122,7 +125,7 @@
 
             {{-- History Sidebar --}}
             <div class="col-xl-4">
-                <div class="history-panel-glass h-100">
+                <div class="history-panel-glass h-100 animate__animated animate__fadeInRight">
                     <div class="panel-header">
                         <h5 class="fw-800 text-white mb-0">Transmission Logs</h5>
                         <p class="text-muted small mb-0">Real-time operation history</p>
@@ -152,7 +155,7 @@
                         @endforelse
                     </div>
                     <div class="panel-footer">
-                        <a href="{{ route('woocommerce.logs') }}" class="btn-view-all w-100 text-center text-decoration-none">View Extended Logs <i class="bi bi-arrow-right ms-2"></i></a>
+                        <button class="btn-view-all">View Extended Logs <i class="bi bi-arrow-right ms-2"></i></button>
                     </div>
                 </div>
             </div>

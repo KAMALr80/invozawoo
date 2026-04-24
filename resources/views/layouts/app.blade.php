@@ -2454,8 +2454,8 @@
             }
         });
 
-        // Poll for notifications every 60 seconds to keep the UI fresh without cluttering logs
-        setInterval(fetchNotifications, 60000);
+        // Poll for notifications every 30 seconds
+        setInterval(fetchNotifications, 30000);
         document.addEventListener('DOMContentLoaded', fetchNotifications);
     </script>
 

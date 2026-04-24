@@ -151,9 +151,4 @@ class WoocommerceController extends Controller
             'message' => "Handshake Failed for {$product->name}. Check system logs."
         ]);
     }
-    public function logs()
-    {
-        $logs = \App\Models\WoocommerceSyncLog::latest()->paginate(20);
-        return view('woocommerce.logs', compact('logs'));
-    }
 }
