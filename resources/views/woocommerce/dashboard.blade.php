@@ -82,6 +82,26 @@
                             <div class="card-badge success">Optimized</div>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="metric-card-glass animate__animated animate__zoomIn" style="animation-delay: 0.3s">
+                            <div class="card-icon amber"><i class="bi bi-arrow-repeat"></i></div>
+                            <div class="card-info">
+                                <span class="label">Pending Sync</span>
+                                <h2 class="value text-white">{{ $pendingProducts ?? 0 }} <small>Items</small></h2>
+                            </div>
+                            <div class="card-badge warning">Action Required</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="metric-card-glass animate__animated animate__zoomIn" style="animation-delay: 0.4s">
+                            <div class="card-icon purple"><i class="bi bi-cart-check"></i></div>
+                            <div class="card-info">
+                                <span class="label">Linked Orders</span>
+                                <h2 class="value text-white">{{ \App\Models\Sale::whereNotNull('woocommerce_order_id')->count() }} <small>Orders</small></h2>
+                            </div>
+                            <div class="card-badge info">Active</div>
+                        </div>
+                    </div>
                     <div class="col-12">
                         <div class="analytics-card-glass p-4 animate__animated animate__fadeInUp">
                             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -89,21 +109,30 @@
                                 <div class="badge-elite-outline">Neural Links</div>
                             </div>
                             <div class="row g-3">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <a href="{{ route('woocommerce.products') }}" class="action-card-glass">
                                         <div class="action-icon purple"><i class="bi bi-box-seam"></i></div>
                                         <div class="action-info">
                                             <div class="title">Product Nexus</div>
-                                            <div class="desc">Individual Product Sync</div>
+                                            <div class="desc">Individual Sync</div>
                                         </div>
                                     </a>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <a href="javascript:void(0)" id="syncOrdersBtn" class="action-card-glass">
+                                        <div class="action-icon emerald"><i class="bi bi-cart-fill"></i></div>
+                                        <div class="action-info">
+                                            <div class="title">Order Nexus</div>
+                                            <div class="desc">Import Orders</div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-md-4">
                                     <a href="{{ route('woocommerce.settings') }}" class="action-card-glass">
                                         <div class="action-icon blue"><i class="bi bi-gear-fill"></i></div>
                                         <div class="action-info">
                                             <div class="title">Config Bridge</div>
-                                            <div class="desc">Manage API & Logic</div>
+                                            <div class="desc">Manage Logic</div>
                                         </div>
                                     </a>
                                 </div>
@@ -408,6 +437,35 @@
             .catch(error => {
                 clearInterval(fakeProgress);
                 updateProgress(0, 'Critical Network Error!');
+                progressText.classList.add('text-danger');
+            });
+        });
+
+        const syncOrdersBtn = document.getElementById('syncOrdersBtn');
+        syncOrdersBtn.addEventListener('click', function() {
+            syncOverlay.style.display = 'flex';
+            updateProgress(10, 'Establishing Order Bridge...');
+            
+            fetch("{{ route('woocommerce.sync.orders') }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateProgress(100, data.message || "Order Nexus Synchronized!");
+                if (data.success) {
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    progressText.classList.add('text-danger');
+                    setTimeout(() => syncOverlay.style.display = 'none', 3000);
+                }
+            })
+            .catch(error => {
+                updateProgress(0, 'Order Transmission Interrupted!');
                 progressText.classList.add('text-danger');
             });
         });

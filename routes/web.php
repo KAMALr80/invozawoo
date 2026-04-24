@@ -829,6 +829,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/settings/test', [WoocommerceController::class, 'testConnection'])->name('settings.test');
         Route::post('/sync/products', [WoocommerceController::class, 'syncProducts'])->name('sync.products');
         Route::post('/sync/single/{id}', [WoocommerceController::class, 'syncSingleProduct'])->name('sync.single');
+        Route::post('/sync/orders', [WoocommerceController::class, 'syncOrders'])->name('sync.orders');
     });
 });
 

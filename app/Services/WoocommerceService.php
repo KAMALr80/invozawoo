@@ -2,8 +2,15 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Models\Sale;
+use App\Models\Product;
+use App\Models\Customer;
+use App\Models\SaleItem;
 use App\Models\WoocommerceSetting;
+use App\Models\WoocommerceSyncLog;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class WoocommerceService
@@ -11,201 +18,309 @@ class WoocommerceService
     protected $url;
     protected $key;
     protected $secret;
+    protected $business_id;
 
-    public function __construct($url = null, $key = null, $secret = null)
+    public function __construct()
     {
-        $settings = WoocommerceSetting::getSettings();
-        $this->url = $url ? rtrim($url, '/') . '/wp-json/wc/v3/' : rtrim($settings->app_url, '/') . '/wp-json/wc/v3/';
-        $this->key = $key ?? $settings->consumer_key;
-        $this->secret = $secret ?? $settings->consumer_secret;
+        $settings = WoocommerceSetting::first();
+        if ($settings) {
+            $this->url = rtrim($settings->app_url, '/');
+            $this->key = $settings->consumer_key;
+            $this->secret = $settings->consumer_secret;
+        }
     }
 
-    /**
-     * Verify connection with provided credentials (alias for checkConnection)
-     */
-    public function verifyConnection($useCache = true)
+    public function checkConnection($force = false)
     {
-        return $this->checkConnection($useCache);
-    }
-
-    /**
-     * Check if API connection is valid
-     */
-    public function checkConnection($useCache = true)
-    {
-        $check = function() {
-            try {
-                if (empty($this->key) || empty($this->secret) || empty($this->url)) {
-                    return false;
-                }
-                $response = Http::withBasicAuth($this->key, $this->secret)
-                    ->timeout(15)
-                    ->get($this->url . 'system_status');
-                
-                return $response->successful();
-            } catch (\Exception $e) {
-                Log::error('WooCommerce Connection Error: ' . $e->getMessage());
-                return false;
-            }
-        };
-
-        if (!$useCache) {
-            return $check();
+        if (!$this->url || !$this->key || !$this->secret) {
+            return ['success' => false, 'message' => 'Credentials not configured'];
         }
 
-        return cache()->remember('woocommerce_connection_status', 300, $check);
+        $cacheKey = 'wc_connection_status';
+        if (!$force && Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        try {
+            $response = Http::withBasicAuth($this->key, $this->secret)
+                ->timeout(30)
+                ->get("{$this->url}/wp-json/wc/v3/system_status");
+
+            $result = $response->successful() 
+                ? ['success' => true, 'message' => 'Connected successfully']
+                : ['success' => false, 'message' => 'Failed to connect: ' . ($response->json()['message'] ?? 'Unknown error')];
+            
+            Cache::put($cacheKey, $result, now()->addMinutes(10));
+            return $result;
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => 'Connection error: ' . $e->getMessage()];
+        }
     }
 
     /**
-     * Get or Create Categories in WooCommerce
+     * Get WooCommerce Categories and cache them
      */
-    protected function getWcCategoryMap()
+    public function getCategories()
     {
-        return cache()->remember('woocommerce_category_map', 3600, function() {
+        return Cache::remember('wc_categories', now()->addHours(1), function () {
             try {
                 $response = Http::withBasicAuth($this->key, $this->secret)
-                    ->get($this->url . 'products/categories', ['per_page' => 100]);
+                    ->get("{$this->url}/wp-json/wc/v3/products/categories", ['per_page' => 100]);
                 
                 if ($response->successful()) {
-                    $categories = $response->json();
-                    $map = [];
-                    foreach ($categories as $cat) {
-                        $map[strtolower($cat['name'])] = $cat['id'];
-                    }
-                    return $map;
+                    return collect($response->json())->pluck('id', 'name')->toArray();
                 }
             } catch (\Exception $e) {
-                Log::error('WooCommerce Category Fetch Error: ' . $e->getMessage());
+                Log::error("WC Category Fetch Error: " . $e->getMessage());
             }
             return [];
         });
     }
 
     /**
-     * Sync Batch of Products
+     * Synchronize Products (Smart Sync)
      */
-    public function syncBatchProducts($products)
+    public function syncBatchProducts($productIds = null, $syncType = 'all')
     {
-        try {
-            if (empty($this->key) || empty($this->secret) || empty($this->url)) {
-                return ['success' => false, 'message' => 'Neural Bridge offline. Missing credentials.'];
+        $query = Product::where('is_active', true);
+
+        if ($productIds) {
+            $query->whereIn('id', $productIds);
+        }
+
+        // Smart Sync Logic
+        if ($syncType === 'smart') {
+            $query->where(function($q) {
+                $q->whereNull('synced_at')
+                  ->orWhereRaw('updated_at > synced_at');
+            });
+        }
+
+        $products = $query->get();
+        if ($products->isEmpty()) {
+            return ['success' => true, 'created' => 0, 'updated' => 0, 'message' => 'No products to sync'];
+        }
+
+        $wcCategories = $this->getCategories();
+        $batchData = ['create' => [], 'update' => []];
+        $idMap = [];
+
+        foreach ($products as $product) {
+            // Find category ID
+            $categories = [];
+            if ($product->category && isset($wcCategories[$product->category])) {
+                $categories[] = ['id' => $wcCategories[$product->category]];
             }
 
-            // Fetch Category Map
-            $categoryMap = $this->getWcCategoryMap();
-
-            // Optimization: Fetch all products from WC once to map SKUs
-            $existingWcProducts = [];
-            $page = 1;
-            
-            do {
-                $response = Http::withBasicAuth($this->key, $this->secret)
-                    ->get($this->url . 'products', [
-                        'page' => $page,
-                        'per_page' => 100,
-                        '_fields' => 'id,sku'
-                    ]);
-                
-                $batch = $response->json();
-                if (empty($batch) || !is_array($batch) || isset($batch['code'])) break;
-                
-                foreach ($batch as $wcItem) {
-                    if (!empty($wcItem['sku'])) {
-                        $existingWcProducts[$wcItem['sku']] = $wcItem['id'];
-                    }
-                }
-                $page++;
-            } while (count($batch) == 100 && $page < 20);
-
-            $batchData = [
-                'create' => [],
-                'update' => []
+            $item = [
+                'name' => $product->name,
+                'type' => 'simple',
+                'regular_price' => (string)$product->price,
+                'description' => $product->description ?? '',
+                'sku' => $product->product_code,
+                'manage_stock' => true,
+                'stock_quantity' => (int)$product->quantity,
+                'stock_status' => $product->quantity > 0 ? 'instock' : 'outofstock',
+                'categories' => $categories,
+                'status' => 'publish',
+                'catalog_visibility' => 'visible',
             ];
 
-            foreach ($products as $product) {
-                // Map Category ID
-                $categories = [];
-                if ($product->category) {
-                    $catName = strtolower($product->category);
-                    if (isset($categoryMap[$catName])) {
-                        $categories[] = ['id' => $categoryMap[$catName]];
-                    }
-                }
-
-                $item = [
-                    'name' => $product->name,
-                    'type' => 'simple',
-                    'regular_price' => (string)$product->price,
-                    'description' => $product->description ?? '',
-                    'short_description' => $product->description ? substr(strip_tags($product->description), 0, 160) : '',
-                    'sku' => $product->product_code,
-                    'manage_stock' => true,
-                    'stock_quantity' => (int)$product->quantity,
-                    'stock_status' => $product->quantity > 0 ? 'instock' : 'outofstock',
-                    'in_stock' => $product->quantity > 0, // Legacy compatibility
-                    'categories' => $categories,
-                    'status' => 'publish',
-                    'catalog_visibility' => 'visible',
-                    'featured' => (bool)$product->is_featured
-                ];
-
-                if ($product->image) {
-                    $item['images'] = [['src' => $product->image_url]];
-                }
-
-                // Check if SKU exists in our fetched map
-                if (isset($existingWcProducts[$product->product_code])) {
-                    $item['id'] = $existingWcProducts[$product->product_code];
-                    $batchData['update'][] = $item;
-                } else {
-                    $batchData['create'][] = $item;
-                }
+            if ($product->image) {
+                $item['images'] = [['src' => $product->image_url]];
             }
 
-            if (empty($batchData['create']) && empty($batchData['update'])) {
-                return ['success' => true, 'created' => 0, 'updated' => 0];
+            if ($product->woocommerce_product_id) {
+                $item['id'] = $product->woocommerce_product_id;
+                $batchData['update'][] = $item;
+            } else {
+                $batchData['create'][] = $item;
             }
+            $idMap[$product->product_code] = $product;
+        }
 
+        try {
             $response = Http::withBasicAuth($this->key, $this->secret)
                 ->timeout(120)
-                ->post($this->url . 'products/batch', $batchData);
+                ->post("{$this->url}/wp-json/wc/v3/products/batch", $batchData);
 
             if ($response->successful()) {
                 $data = $response->json();
-                
-                $created = collect($data['create'] ?? [])->filter(fn($item) => !isset($item['error']));
-                $updated = collect($data['update'] ?? [])->filter(fn($item) => !isset($item['error']));
-                $failed = collect($data['create'] ?? [])->merge($data['update'] ?? [])->filter(fn($item) => isset($item['error']));
+                $successCount = 0;
+                $failedItems = [];
 
-                if ($failed->count() > 0) {
-                    Log::warning('WooCommerce Sync Partial Failure', [
-                        'errors' => $failed->map(fn($f) => $f['error']['message'] ?? 'Unknown error')->toArray()
-                    ]);
+                // Process Created
+                foreach ($data['create'] ?? [] as $item) {
+                    if (isset($item['id'])) {
+                        $product = $idMap[$item['sku']] ?? null;
+                        if ($product) {
+                            $product->update([
+                                'woocommerce_product_id' => $item['id'],
+                                'synced_at' => now()
+                            ]);
+                            $successCount++;
+                        }
+                    } else if (isset($item['error'])) {
+                        $failedItems[] = "Create failed for {$item['sku']}: " . ($item['error']['message'] ?? 'Unknown');
+                    }
                 }
 
+                // Process Updated
+                foreach ($data['update'] ?? [] as $item) {
+                    if (isset($item['id'])) {
+                        $product = $idMap[$item['sku']] ?? null;
+                        if ($product) {
+                            $product->update(['synced_at' => now()]);
+                            $successCount++;
+                        }
+                    } else if (isset($item['error'])) {
+                        $failedItems[] = "Update failed for {$item['sku']}: " . ($item['error']['message'] ?? 'Unknown');
+                    }
+                }
+
+                $this->createLog('product_sync', count($products), $successCount, count($failedItems), $failedItems);
+
                 return [
-                    'success' => $created->count() > 0 || $updated->count() > 0,
-                    'created' => $created->count(),
-                    'updated' => $updated->count(),
-                    'failed' => $failed->count(),
-                    'errors' => $failed->map(fn($f) => $f['error']['message'] ?? 'Unknown error')->toArray()
+                    'success' => true,
+                    'total' => count($products),
+                    'success_count' => $successCount,
+                    'failed_count' => count($failedItems),
+                    'errors' => $failedItems
                 ];
             }
-
-            Log::error('WooCommerce Batch Sync Failed: ' . $response->body());
-            return ['success' => false, 'message' => 'Transmission Error: ' . $response->status()];
-
         } catch (\Exception $e) {
-            Log::error('WooCommerce Batch Sync Exception: ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Internal Pulse Failure: ' . $e->getMessage()];
+            return ['success' => false, 'message' => 'Sync error: ' . $e->getMessage()];
         }
     }
 
     /**
-     * Sync Product
+     * Synchronize Orders from WooCommerce
      */
-    public function syncProduct($product)
+    public function syncOrders()
     {
-        return $this->syncBatchProducts(collect([$product]));
+        try {
+            $response = Http::withBasicAuth($this->key, $this->secret)
+                ->get("{$this->url}/wp-json/wc/v3/orders", ['status' => 'any', 'per_page' => 50]);
+
+            if ($response->successful()) {
+                $orders = $response->json();
+                $syncedCount = 0;
+                $errors = [];
+
+                foreach ($orders as $wcOrder) {
+                    // Check if already synced
+                    if (Sale::where('woocommerce_order_id', $wcOrder['id'])->exists()) {
+                        continue;
+                    }
+
+                    DB::beginTransaction();
+                    try {
+                        // 1. Get or Create Customer
+                        $customer = $this->getOrCreateCustomer($wcOrder['billing'], $wcOrder['customer_id']);
+
+                        // 2. Create Sale
+                        $sale = Sale::create([
+                            'woocommerce_order_id' => $wcOrder['id'],
+                            'customer_id' => $customer->id,
+                            'invoice_no' => 'WC-' . $wcOrder['number'],
+                            'invoice_token' => bin2hex(random_bytes(16)),
+                            'sale_date' => date('Y-m-d H:i:s', strtotime($wcOrder['date_created'])),
+                            'sub_total' => $wcOrder['total'] - $wcOrder['total_tax'],
+                            'tax_amount' => $wcOrder['total_tax'],
+                            'grand_total' => $wcOrder['total'],
+                            'payment_status' => $wcOrder['status'] === 'completed' ? 'paid' : 'pending',
+                            'paid_amount' => $wcOrder['status'] === 'completed' ? $wcOrder['total'] : 0,
+                            'shipping_address' => $wcOrder['shipping']['address_1'] . ' ' . ($wcOrder['shipping']['address_2'] ?? ''),
+                            'city' => $wcOrder['shipping']['city'],
+                            'state' => $wcOrder['shipping']['state'],
+                            'pincode' => $wcOrder['shipping']['postcode'],
+                            'receiver_name' => $wcOrder['shipping']['first_name'] . ' ' . $wcOrder['shipping']['last_name'],
+                            'receiver_phone' => $wcOrder['billing']['phone'] ?? '',
+                            'shipping_status' => $this->mapOrderStatus($wcOrder['status']),
+                            'created_by' => 1 // Default System Admin
+                        ]);
+
+                        // 3. Create Sale Items & Update Stock
+                        foreach ($wcOrder['line_items'] as $item) {
+                            $product = Product::where('product_code', $item['sku'])->first();
+                            if ($product) {
+                                SaleItem::create([
+                                    'sale_id' => $sale->id,
+                                    'product_id' => $product->id,
+                                    'quantity' => $item['quantity'],
+                                    'price' => $item['price'],
+                                    'total' => $item['total']
+                                ]);
+
+                                // Deduct Stock
+                                $product->decrement('quantity', $item['quantity']);
+                            }
+                        }
+
+                        DB::commit();
+                        $syncedCount++;
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        $errors[] = "Order #{$wcOrder['id']} failed: " . $e->getMessage();
+                    }
+                }
+
+                $this->createLog('order_sync', count($orders), $syncedCount, count($errors), $errors);
+                return ['success' => true, 'synced' => $syncedCount, 'errors' => $errors];
+            }
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => 'Order Sync error: ' . $e->getMessage()];
+        }
+    }
+
+    protected function getOrCreateCustomer($billing, $wcCustomerId)
+    {
+        $customer = Customer::where('woocommerce_customer_id', $wcCustomerId)->first();
+        if (!$customer && !empty($billing['email'])) {
+            $customer = Customer::where('email', $billing['email'])->first();
+        }
+
+        if (!$customer) {
+            $customer = Customer::create([
+                'woocommerce_customer_id' => $wcCustomerId ?: null,
+                'name' => $billing['first_name'] . ' ' . $billing['last_name'],
+                'mobile' => $billing['phone'] ?? '',
+                'email' => $billing['email'] ?? '',
+                'address' => $billing['address_1'],
+                'city' => $billing['city'],
+                'state' => $billing['state'],
+                'pincode' => $billing['postcode'],
+                'country' => $billing['country']
+            ]);
+        } else if (!$customer->woocommerce_customer_id && $wcCustomerId) {
+            $customer->update(['woocommerce_customer_id' => $wcCustomerId]);
+        }
+
+        return $customer;
+    }
+
+    protected function mapOrderStatus($wcStatus)
+    {
+        $map = [
+            'pending' => 'pending',
+            'processing' => 'shipped',
+            'completed' => 'delivered',
+            'cancelled' => 'cancelled',
+            'refunded' => 'cancelled',
+            'failed' => 'pending'
+        ];
+        return $map[$wcStatus] ?? 'pending';
+    }
+
+    protected function createLog($type, $total, $success, $failed, $details)
+    {
+        WoocommerceSyncLog::create([
+            'operation_type' => $type,
+            'items_total' => $total,
+            'items_success' => $success,
+            'items_failed' => $failed,
+            'status' => $failed > 0 ? ($success > 0 ? 'partial' : 'failed') : 'success',
+            'details' => $details
+        ]);
     }
 }

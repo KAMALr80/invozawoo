@@ -11,6 +11,7 @@ class Sale extends Model
     use SoftDeletes, Auditable;
 
     protected $fillable = [
+        'woocommerce_order_id',
         'customer_id',
         'invoice_no',
         'invoice_token',

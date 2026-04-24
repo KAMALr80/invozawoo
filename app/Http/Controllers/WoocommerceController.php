@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\WoocommerceSetting;
 use App\Models\Product;
+use App\Models\WoocommerceSyncLog;
 use App\Services\WoocommerceService;
 
 class WoocommerceController extends Controller
@@ -12,10 +13,16 @@ class WoocommerceController extends Controller
     public function index()
     {
         $settings = WoocommerceSetting::getSettings();
-        $stats = $settings->last_sync_stats ?? [];
-        $logs = \App\Models\WoocommerceSyncLog::latest()->take(10)->get();
+        $logs = WoocommerceSyncLog::latest()->take(10)->get();
         
-        return view('woocommerce.dashboard', compact('settings', 'stats', 'logs'));
+        // Calculate status counts
+        $pendingProducts = Product::where('is_active', true)
+            ->where(function($q) {
+                $q->whereNull('synced_at')
+                  ->orWhereRaw('updated_at > synced_at');
+            })->count();
+
+        return view('woocommerce.dashboard', compact('settings', 'logs', 'pendingProducts'));
     }
 
     public function settings()
@@ -41,78 +48,54 @@ class WoocommerceController extends Controller
     public function syncProducts(Request $request)
     {
         $service = new WoocommerceService();
-        if (!$service->checkConnection()) {
-            if ($request->ajax()) {
-                return response()->json(['success' => false, 'message' => 'Could not connect to WooCommerce.']);
-            }
-            return redirect()->back()->with('error', 'Could not connect to WooCommerce. Please check API keys.');
-        }
-
-        // Get total count for progress tracking if AJAX
-        $totalProducts = Product::where('is_active', true)->count();
-        if ($totalProducts == 0) {
-            if ($request->ajax()) {
-                return response()->json(['success' => true, 'message' => 'No active products to sync.', 'count' => 0]);
-            }
-            return redirect()->back()->with('info', 'No active products to sync.');
-        }
-
-        $count = 0;
-        $failedCount = 0;
+        $syncType = $request->input('type', 'smart'); // default to smart sync
         
-        // Use chunking to process in batches
-        Product::where('is_active', true)->chunk(50, function($products) use ($service, &$count, &$failedCount) {
-            $result = $service->syncBatchProducts($products);
-            if (is_array($result) && $result['success']) {
-                $count += ($result['created'] + $result['updated']);
-                $failedCount += ($result['failed'] ?? 0);
-            } else {
-                $failedCount += $products->count();
+        $connection = $service->checkConnection(true);
+        if (!$connection['success']) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => $connection['message']]);
             }
-        });
+            return redirect()->back()->with('error', $connection['message']);
+        }
 
-        // Save detailed log
-        \App\Models\WoocommerceSyncLog::create([
-            'operation_type' => 'Full Sync',
-            'items_total' => $totalProducts,
-            'items_success' => $count,
-            'items_failed' => $failedCount,
-            'status' => ($count == $totalProducts) ? 'Completed' : (($count > 0) ? 'Partial' : 'Failed'),
-            'details' => [
-                'triggered_by' => auth()->user()->name,
-                'error' => ($count == 0 && $failedCount > 0) ? 'All items failed' : null
-            ]
-        ]);
-
-        $settings = WoocommerceSetting::getSettings();
-        $stats = $settings->last_sync_stats ?? [];
-        $stats['products'] = [
-            'last_sync' => now()->toDateTimeString(),
-            'count' => $count
-        ];
-        $settings->update(['last_sync_stats' => $stats]);
+        $result = $service->syncBatchProducts(null, $syncType);
 
         if ($request->ajax()) {
-            return response()->json([
-                'success' => true, 
-                'message' => "Successfully synced {$count} products to WooCommerce!",
-                'count' => $count
-            ]);
+            return response()->json($result);
         }
 
-        return redirect()->back()->with('success', "Successfully synced {$count} products to WooCommerce!");
+        if ($result['success']) {
+            return redirect()->back()->with('success', "Successfully synced {$result['success_count']} products!");
+        }
+
+        return redirect()->back()->with('error', $result['message'] ?? 'Synchronization failed');
+    }
+
+    public function syncOrders(Request $request)
+    {
+        $service = new WoocommerceService();
+        $connection = $service->checkConnection();
+        
+        if (!$connection['success']) {
+            return response()->json($connection);
+        }
+
+        $result = $service->syncOrders();
+        
+        if ($request->ajax()) {
+            return response()->json($result);
+        }
+
+        return redirect()->back()->with('success', "Successfully synced {$result['synced']} orders!");
     }
 
     public function testConnection(Request $request)
     {
-        $service = new WoocommerceService($request->app_url, $request->consumer_key, $request->consumer_secret);
+        // This logic is now inside the service
+        $service = new WoocommerceService();
+        $result = $service->checkConnection(true);
         
-        // Disable cache for testing purposes
-        if ($service->verifyConnection(false)) {
-            return response()->json(['success' => true, 'message' => 'Successfully connected to WooCommerce!']);
-        }
-        
-        return response()->json(['success' => false, 'message' => 'Failed to connect. Please check your credentials and URL.']);
+        return response()->json($result);
     }
 
     public function products()
@@ -124,27 +107,19 @@ class WoocommerceController extends Controller
 
     public function syncSingleProduct($id)
     {
-        $product = Product::findOrFail($id);
         $service = new WoocommerceService();
-        
-        if (!$service->checkConnection()) {
-            return response()->json(['success' => false, 'message' => 'Neural Bridge offline. Check API keys.']);
-        }
+        $result = $service->syncBatchProducts([$id], 'all');
 
-        $result = $service->syncProduct($product);
-
-        if ($result && isset($result['success']) && $result['success']) {
-            // ... (sync logging logic) ...
+        if ($result['success'] && $result['success_count'] > 0) {
             return response()->json([
                 'success' => true,
-                'message' => "Pulse Sync Successful: {$product->name} is live on WooCommerce."
+                'message' => "Successfully synced product to WooCommerce."
             ]);
         }
 
-        $errorMsg = $result['errors'][0] ?? "Handshake Failed for {$product->name}. Check credentials.";
         return response()->json([
             'success' => false,
-            'message' => "WooCommerce Error: " . $errorMsg
+            'message' => $result['errors'][0] ?? "Sync failed"
         ]);
     }
 }
