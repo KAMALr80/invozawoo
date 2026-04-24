@@ -70,6 +70,7 @@ class WoocommerceService
                     ->get($this->url . 'products', [
                         'page' => $page,
                         'per_page' => 100,
+                        'status' => 'any',
                         '_fields' => 'id,sku'
                     ]);
                 
@@ -99,7 +100,9 @@ class WoocommerceService
                     'manage_stock' => true,
                     'stock_quantity' => (int)$product->quantity,
                     'sku' => $product->product_code,
-                    'status' => 'publish'
+                    'status' => 'publish',
+                    'catalog_visibility' => 'visible',
+                    'stock_status' => (int)$product->quantity > 0 ? 'instock' : 'outofstock'
                 ];
 
                 if ($product->image) {
