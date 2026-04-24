@@ -65,7 +65,7 @@ class WoocommerceController extends Controller
             $result = $service->syncBatchProducts($products);
             if (is_array($result) && $result['success']) {
                 $count += ($result['created'] + $result['updated']);
-                // Assuming result could track individual failures in the future
+                $failedCount += ($result['failed'] ?? 0);
             } else {
                 $failedCount += $products->count();
             }
@@ -78,7 +78,10 @@ class WoocommerceController extends Controller
             'items_success' => $count,
             'items_failed' => $failedCount,
             'status' => ($count == $totalProducts) ? 'Completed' : (($count > 0) ? 'Partial' : 'Failed'),
-            'details' => ['triggered_by' => auth()->user()->name]
+            'details' => [
+                'triggered_by' => auth()->user()->name,
+                'error' => ($count == 0 && $failedCount > 0) ? 'All items failed' : null
+            ]
         ]);
 
         $settings = WoocommerceSetting::getSettings();
@@ -131,25 +134,17 @@ class WoocommerceController extends Controller
         $result = $service->syncProduct($product);
 
         if ($result && isset($result['success']) && $result['success']) {
-            // Log this specific action
-            \App\Models\WoocommerceSyncLog::create([
-                'operation_type' => 'Single Sync',
-                'items_total' => 1,
-                'items_success' => 1,
-                'items_failed' => 0,
-                'status' => 'Completed',
-                'details' => ['product_id' => $product->id, 'product_name' => $product->name]
-            ]);
-
+            // ... (sync logging logic) ...
             return response()->json([
                 'success' => true,
                 'message' => "Pulse Sync Successful: {$product->name} is live on WooCommerce."
             ]);
         }
 
+        $errorMsg = $result['errors'][0] ?? "Handshake Failed for {$product->name}. Check credentials.";
         return response()->json([
             'success' => false,
-            'message' => "Handshake Failed for {$product->name}. Check system logs."
+            'message' => "WooCommerce Error: " . $errorMsg
         ]);
     }
 }

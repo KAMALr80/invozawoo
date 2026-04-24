@@ -175,10 +175,23 @@ class WoocommerceService
 
             if ($response->successful()) {
                 $data = $response->json();
+                
+                $created = collect($data['create'] ?? [])->filter(fn($item) => !isset($item['error']));
+                $updated = collect($data['update'] ?? [])->filter(fn($item) => !isset($item['error']));
+                $failed = collect($data['create'] ?? [])->merge($data['update'] ?? [])->filter(fn($item) => isset($item['error']));
+
+                if ($failed->count() > 0) {
+                    Log::warning('WooCommerce Sync Partial Failure', [
+                        'errors' => $failed->map(fn($f) => $f['error']['message'] ?? 'Unknown error')->toArray()
+                    ]);
+                }
+
                 return [
-                    'success' => true,
-                    'created' => count($data['create'] ?? []),
-                    'updated' => count($data['update'] ?? [])
+                    'success' => $created->count() > 0 || $updated->count() > 0,
+                    'created' => $created->count(),
+                    'updated' => $updated->count(),
+                    'failed' => $failed->count(),
+                    'errors' => $failed->map(fn($f) => $f['error']['message'] ?? 'Unknown error')->toArray()
                 ];
             }
 
