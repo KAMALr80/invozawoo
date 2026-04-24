@@ -119,7 +119,7 @@ class WoocommerceController extends Controller
 
         return response()->json([
             'success' => false,
-            'message' => $result['errors'][0] ?? "Sync failed"
+            'message' => $result['errors'][0] ?? ($result['message'] ?? "Sync failed")
         ]);
     }
 }

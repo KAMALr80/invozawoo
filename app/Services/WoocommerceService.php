@@ -98,7 +98,12 @@ class WoocommerceService
 
         $products = $query->get();
         if ($products->isEmpty()) {
-            return ['success' => true, 'created' => 0, 'updated' => 0, 'message' => 'No products to sync'];
+            return [
+                'success' => true, 
+                'success_count' => 0, 
+                'failed_count' => 0, 
+                'message' => 'No products to sync'
+            ];
         }
 
         $wcCategories = $this->getCategories();
@@ -188,7 +193,15 @@ class WoocommerceService
                     'errors' => $failedItems
                 ];
             }
+            
+            return [
+                'success' => false, 
+                'message' => 'WooCommerce API Error: ' . ($response->json()['message'] ?? 'Status Code ' . $response->status())
+            ];
         } catch (\Exception $e) {
+            Log::error("WooCommerce Sync Error: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return ['success' => false, 'message' => 'Sync error: ' . $e->getMessage()];
         }
     }
@@ -268,6 +281,11 @@ class WoocommerceService
                 $this->createLog('order_sync', count($orders), $syncedCount, count($errors), $errors);
                 return ['success' => true, 'synced' => $syncedCount, 'errors' => $errors];
             }
+
+            return [
+                'success' => false, 
+                'message' => 'WooCommerce API Error: ' . ($response->json()['message'] ?? 'Status Code ' . $response->status())
+            ];
         } catch (\Exception $e) {
             return ['success' => false, 'message' => 'Order Sync error: ' . $e->getMessage()];
         }
