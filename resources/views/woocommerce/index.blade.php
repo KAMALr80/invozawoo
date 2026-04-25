@@ -238,6 +238,31 @@
 <script>
     $(document).ready(function() {
         $('.select2').select2();
+
+        // Debounce / Loading State for Forms
+        $('form').on('submit', function() {
+            const $form = $(this);
+            const $btn = $form.find('button[type="submit"]');
+            
+            // Check if it's a sync button
+            if ($btn.hasClass('op-button') || $btn.hasClass('btn-warning') || $btn.hasClass('btn-primary')) {
+                const originalHtml = $btn.html();
+                
+                // Disable button
+                $btn.prop('disabled', true);
+                
+                // Show loading spinner
+                $btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Processing...');
+                
+                // Safety timeout to re-enable if something goes wrong (e.g. page doesn't refresh)
+                setTimeout(() => {
+                    if ($btn.prop('disabled')) {
+                        $btn.prop('disabled', false);
+                        $btn.html(originalHtml);
+                    }
+                }, 120000); // 2 minutes
+            }
+        });
     });
 </script>
 @endpush
