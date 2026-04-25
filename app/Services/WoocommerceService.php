@@ -224,6 +224,20 @@ class WoocommerceService
 
         $this->createLog('product_sync', $products->count(), $overallResults['success_count'], $overallResults['failed_count'], $overallResults['errors']);
 
+        // Generate a descriptive message for the UI
+        if ($overallResults['success_count'] > 0) {
+            $msg = "Successfully synced {$overallResults['success_count']} products.";
+            if ($overallResults['failed_count'] > 0) {
+                $msg .= " However, {$overallResults['failed_count']} items failed.";
+            }
+            $overallResults['message'] = $msg;
+        } else if ($overallResults['failed_count'] > 0) {
+            $overallResults['success'] = false;
+            $overallResults['message'] = "Sync failed for all {$overallResults['failed_count']} items. Check logs for details.";
+        } else {
+            $overallResults['message'] = "Sync completed. No changes detected.";
+        }
+
         return $overallResults;
     }
 

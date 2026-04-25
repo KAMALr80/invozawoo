@@ -164,6 +164,18 @@
                                 <div class="stats small">
                                     <span class="text-indigo-glow fw-bold">{{ $log->items_success }}</span> / {{ $log->items_total }} items synced
                                 </div>
+                                @if(!empty($log->details))
+                                <div class="log-details mt-2 small text-muted" style="font-family: monospace; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 5px; max-height: 80px; overflow-y: auto;">
+                                    @if(is_array($log->details))
+                                        @foreach(array_slice($log->details, 0, 5) as $error)
+                                            • {{ $error }}<br>
+                                        @endforeach
+                                        @if(count($log->details) > 5) ... and {{ count($log->details) - 5 }} more @endif
+                                    @else
+                                        {{ $log->details }}
+                                    @endif
+                                </div>
+                                @endif
                             </div>
                         </div>
                         @empty
