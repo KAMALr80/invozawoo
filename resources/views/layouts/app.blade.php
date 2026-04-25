@@ -1808,16 +1808,6 @@
                 </a>
             @endif
 
-            @if (auth()->user()->role === 'admin' || auth()->user()->hasPermission('woocommerce_access'))
-                <a href="{{ route('woocommerce.index') }}" class="nav-link {{ request()->routeIs('woocommerce*') ? 'active' : '' }} elite-nav-item">
-                    <div class="elite-icon-box">
-                        <i class="fas fa-globe nav-icon"></i>
-                        <span class="elite-pulse"></span>
-                    </div>
-                    <span>WooCommerce</span>
-                    <span class="elite-pro-badge">PRO</span>
-                </a>
-            @endif
 
             @if (\Illuminate\Support\Facades\Cache::get('logistics_system_enabled', true) && (auth()->user()->hasPermission('manage_logistics') || auth()->user()->role === 'admin'))
                 <a href="{{ route('admin.tracking.agents') }}" class="nav-link {{ request()->routeIs('admin.tracking.agents') ? 'active' : '' }}">

@@ -114,7 +114,6 @@ class Role extends Model
             'manage_settings' => 'Manage App Settings',
             'view_approvals' => 'View Approvals',
             'manage_approvals' => 'Manage Approvals',
-            'woocommerce_access' => 'WooCommerce Access',
         ];
     }
 

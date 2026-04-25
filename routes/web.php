@@ -11,7 +11,6 @@ use App\Models\Product;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\WoocommerceController;
 
 // Employee & HR
 use App\Http\Controllers\Employees\EmployeeController;
@@ -820,17 +819,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
 
-    /* ================= WOOCOMMERCE ROUTES ================= */
-    Route::prefix('woocommerce')->name('woocommerce.')->group(function () {
-        Route::get('/', [WoocommerceController::class, 'index'])->name('index');
-        Route::get('/products', [WoocommerceController::class, 'products'])->name('products');
-        Route::get('/settings', [WoocommerceController::class, 'settings'])->name('settings');
-        Route::post('/settings', [WoocommerceController::class, 'updateSettings'])->name('settings.update');
-        Route::post('/settings/test', [WoocommerceController::class, 'testConnection'])->name('settings.test');
-        Route::post('/sync/products', [WoocommerceController::class, 'syncProducts'])->name('sync.products');
-        Route::post('/sync/single/{id}', [WoocommerceController::class, 'syncSingleProduct'])->name('sync.single');
-        Route::post('/sync/orders', [WoocommerceController::class, 'syncOrders'])->name('sync.orders');
-    });
+
 });
 
 // ==================== TWO FACTOR AUTHENTICATION ROUTES ====================

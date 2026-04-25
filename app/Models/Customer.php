@@ -12,7 +12,6 @@ class Customer extends Model
     use SoftDeletes, HasFactory, Auditable;
 
     protected $fillable = [
-        'woocommerce_customer_id',
         'name',
         'mobile',
         'email',
