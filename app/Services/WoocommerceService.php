@@ -43,7 +43,8 @@ class WoocommerceService
 
         try {
             $response = Http::withBasicAuth($this->key, $this->secret)
-                ->timeout(30)
+                ->connectTimeout(30)
+                ->timeout(60)
                 ->get("{$this->url}/wp-json/wc/v3/system_status");
 
             $result = $response->successful() 
@@ -108,122 +109,115 @@ class WoocommerceService
 
         $wcCategories = $this->getCategories();
         
-        // Auto-map existing products by SKU if they don't have ID locally
-        $this->mapExistingProducts($products);
+        $chunks = $products->chunk(50); // Process in smaller batches to avoid timeouts
+        $overallResults = [
+            'success' => true,
+            'success_count' => 0,
+            'failed_count' => 0,
+            'errors' => []
+        ];
 
-        $batchData = ['create' => [], 'update' => []];
-        $idMap = [];
+        foreach ($chunks as $chunk) {
+            // Auto-map existing products by SKU for this chunk
+            $this->mapExistingProducts($chunk);
 
-        foreach ($products as $product) {
-            // Skip products without code/sku
-            if (empty($product->product_code)) {
+            $batchData = ['create' => [], 'update' => []];
+            $idMap = [];
+
+            foreach ($chunk as $product) {
+                // Skip products without code/sku
+                if (empty($product->product_code)) continue;
+
+                // Find or Create category ID
+                $categories = [];
+                if ($product->category) {
+                    $catId = $this->getOrCreateCategory($product->category, $wcCategories);
+                    if ($catId) {
+                        $categories[] = ['id' => $catId];
+                    }
+                }
+
+                $item = [
+                    'name' => (string)$product->name,
+                    'type' => 'simple',
+                    'regular_price' => (string)$product->price,
+                    'description' => (string)($product->description ?? ''),
+                    'short_description' => (string)($product->description ?? ''),
+                    'sku' => (string)$product->product_code,
+                    'manage_stock' => true,
+                    'stock_quantity' => (int)$product->quantity,
+                    'stock_status' => $product->quantity > 0 ? 'instock' : 'outofstock',
+                    'categories' => $categories,
+                    'status' => 'publish',
+                    'catalog_visibility' => 'visible',
+                ];
+
+                $item['images'] = [['src' => $product->image_url]];
+
+                if ($product->woocommerce_product_id) {
+                    $item['id'] = $product->woocommerce_product_id;
+                    $batchData['update'][] = $item;
+                } else {
+                    $batchData['create'][] = $item;
+                }
+                $idMap[$product->product_code] = $product;
+            }
+
+            if (empty($batchData['create']) && empty($batchData['update'])) {
                 continue;
             }
 
-            // Find or Create category ID
-            $categories = [];
-            if ($product->category) {
-                $catId = $this->getOrCreateCategory($product->category, $wcCategories);
-                if ($catId) {
-                    $categories[] = ['id' => $catId];
+            try {
+                $response = Http::withBasicAuth($this->key, $this->secret)
+                    ->timeout(60) // Reduced timeout per chunk
+                    ->post("{$this->url}/wp-json/wc/v3/products/batch", $batchData);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    
+                    // Process Created
+                    foreach ($data['create'] ?? [] as $item) {
+                        if (isset($item['id']) && isset($item['sku'])) {
+                            $product = $idMap[$item['sku']] ?? null;
+                            if ($product) {
+                                $product->update([
+                                    'woocommerce_product_id' => $item['id'],
+                                    'synced_at' => now()
+                                ]);
+                                $overallResults['success_count']++;
+                            }
+                        } else if (isset($item['error'])) {
+                            $overallResults['failed_count']++;
+                            $overallResults['errors'][] = "Create Error (SKU: " . ($item['sku'] ?? 'N/A') . "): " . ($item['error']['message'] ?? 'Unknown');
+                        }
+                    }
+
+                    // Process Updated
+                    foreach ($data['update'] ?? [] as $item) {
+                        if (isset($item['id']) && isset($item['sku'])) {
+                            $product = $idMap[$item['sku']] ?? null;
+                            if ($product) {
+                                $product->update(['synced_at' => now()]);
+                                $overallResults['success_count']++;
+                            }
+                        } else if (isset($item['error'])) {
+                            $overallResults['failed_count']++;
+                            $overallResults['errors'][] = "Update Error (SKU: " . ($item['sku'] ?? 'N/A') . "): " . ($item['error']['message'] ?? 'Unknown');
+                        }
+                    }
+                } else {
+                    $overallResults['success'] = false;
+                    $overallResults['errors'][] = 'Batch API Error: ' . ($response->json()['message'] ?? 'Status ' . $response->status());
                 }
+            } catch (\Exception $e) {
+                Log::error("WooCommerce Sync Chunk Error: " . $e->getMessage());
+                $overallResults['errors'][] = "Chunk Exception: " . $e->getMessage();
             }
-
-            // Brand Mapping (common for brand plugins)
-            $brands = [];
-            if ($product->brand) {
-                $brandId = $this->getOrCreateBrand($product->brand);
-                if ($brandId) {
-                    $brands[] = ['id' => $brandId];
-                }
-            }
-
-            $item = [
-                'name' => (string)$product->name,
-                'type' => 'simple',
-                'regular_price' => (string)$product->price,
-                'description' => (string)($product->description ?? ''),
-                'short_description' => (string)($product->description ?? ''),
-                'sku' => (string)$product->product_code,
-                'manage_stock' => true,
-                'stock_quantity' => (int)$product->quantity,
-                'stock_status' => $product->quantity > 0 ? 'instock' : 'outofstock',
-                'categories' => $categories,
-                'status' => 'publish',
-                'catalog_visibility' => 'visible',
-            ];
-
-            $item['images'] = [['src' => $product->image_url]];
-
-            if ($product->woocommerce_product_id) {
-                $item['id'] = $product->woocommerce_product_id;
-                $batchData['update'][] = $item;
-            } else {
-                $batchData['create'][] = $item;
-            }
-            $idMap[$product->product_code] = $product;
         }
 
-        try {
-            $response = Http::withBasicAuth($this->key, $this->secret)
-                ->timeout(120)
-                ->post("{$this->url}/wp-json/wc/v3/products/batch", $batchData);
+        $this->createLog('product_sync', $products->count(), $overallResults['success_count'], $overallResults['failed_count'], $overallResults['errors']);
 
-            if ($response->successful()) {
-                $data = $response->json();
-                $successCount = 0;
-                $failedItems = [];
-
-                // Process Created
-                foreach ($data['create'] ?? [] as $item) {
-                    if (isset($item['id']) && isset($item['sku'])) {
-                        $product = $idMap[$item['sku']] ?? null;
-                        if ($product) {
-                            $product->update([
-                                'woocommerce_product_id' => $item['id'],
-                                'synced_at' => now()
-                            ]);
-                            $successCount++;
-                        }
-                    } else if (isset($item['error'])) {
-                        $failedItems[] = "Create failed for {$item['sku']}: " . ($item['error']['message'] ?? 'Unknown');
-                    }
-                }
-
-                // Process Updated
-                foreach ($data['update'] ?? [] as $item) {
-                    if (isset($item['id']) && isset($item['sku'])) {
-                        $product = $idMap[$item['sku']] ?? null;
-                        if ($product) {
-                            $product->update(['synced_at' => now()]);
-                            $successCount++;
-                        }
-                    } else if (isset($item['error'])) {
-                        $failedItems[] = "Update failed for {$item['sku']}: " . ($item['error']['message'] ?? 'Unknown');
-                    }
-                }
-
-                $this->createLog('product_sync', count($products), $successCount, count($failedItems), $failedItems);
-
-                return [
-                    'success' => true,
-                    'total' => count($products),
-                    'success_count' => $successCount,
-                    'failed_count' => count($failedItems),
-                    'errors' => $failedItems
-                ];
-            }
-            
-            return [
-                'success' => false, 
-                'message' => 'WooCommerce API Error: ' . ($response->json()['message'] ?? 'Status Code ' . $response->status())
-            ];
-        } catch (\Exception $e) {
-            Log::error("WooCommerce Sync Error: " . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            return ['success' => false, 'message' => 'Sync error: ' . $e->getMessage()];
-        }
+        return $overallResults;
     }
 
     /**
