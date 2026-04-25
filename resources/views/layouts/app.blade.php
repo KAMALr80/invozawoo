@@ -1768,6 +1768,13 @@
                     </ul>
                 </div>
             @endif
+            
+            {{-- WooCommerce Integration --}}
+            @if (auth()->user()->role === 'admin')
+                <a href="{{ route('woocommerce.index') }}" class="nav-link {{ request()->routeIs('woocommerce.*') ? 'active' : '' }}">
+                    <i class="fab fa-wordpress nav-icon"></i> <span>WooCommerce</span>
+                </a>
+            @endif
 
             @if (auth()->user()->hasPermission('view_attendance'))
                 <a href="{{ route('attendance.manage') }}" class="nav-link {{ request()->routeIs('attendance.manage') ? 'active' : '' }}">
@@ -1921,6 +1928,17 @@
             setTimeout(() => {
                 document.querySelector('.toast-notification')?.remove();
             }, 3000);
+        </script>
+    @endif
+
+    @if (session('error'))
+        <div class="toast-notification" style="background: #ef4444;">
+            ❌ {{ session('error') }}
+        </div>
+        <script>
+            setTimeout(() => {
+                document.querySelector('.toast-notification')?.remove();
+            }, 5000);
         </script>
     @endif
 

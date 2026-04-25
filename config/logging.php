@@ -127,6 +127,12 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'woocommerce' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/woocommerce.log'),
+            'level' => 'debug',
+        ],
+
     ],
 
 ];

@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\WoocommerceController;
 
 // Employee & HR
 use App\Http\Controllers\Employees\EmployeeController;
@@ -204,6 +205,16 @@ require __DIR__ . '/auth.php';
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
+    /* ================= WOOCOMMERCE ================= */
+    Route::prefix('woocommerce')->name('woocommerce.')->group(function () {
+        Route::get('/', [WoocommerceController::class, 'index'])->name('index');
+        Route::post('/settings', [WoocommerceController::class, 'updateSettings'])->name('update-settings');
+        Route::post('/sync-products', [WoocommerceController::class, 'syncProducts'])->name('sync-products');
+        Route::post('/sync-single-product', [WoocommerceController::class, 'syncSingleProduct'])->name('sync-single-product');
+        Route::post('/sync-orders', [WoocommerceController::class, 'syncOrders'])->name('sync-orders');
+        Route::post('/sync-customers', [WoocommerceController::class, 'syncCustomers'])->name('sync-customers');
+    });
+
 
     /* ================= DASHBOARD ================= */
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

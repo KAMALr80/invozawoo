@@ -74,7 +74,10 @@ class Product extends Model
 
         // Audit
         'created_by',
-        'updated_by'
+        'updated_by',
+        'woocommerce_product_id',
+        'woocommerce_media_id',
+        'woocommerce_sync_disabled'
     ];
 
     protected $casts = [

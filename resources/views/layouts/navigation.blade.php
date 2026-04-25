@@ -442,6 +442,10 @@
                         <span>📊</span>
                         <span style="margin-left: 8px;">{{ __('Dashboard') }}</span>
                     </x-nav-link>
+                    <x-nav-link :href="route('woocommerce.index')" :active="request()->routeIs('woocommerce.*')" class="nav-link">
+                        <span>🔌</span>
+                        <span style="margin-left: 8px;">{{ __('WooCommerce') }}</span>
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -510,6 +514,13 @@
                 <span style="display: flex; align-items: center; gap: 8px;">
                     <span>📊</span>
                     {{ __('Dashboard') }}
+                </span>
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('woocommerce.index')" :active="request()->routeIs('woocommerce.*')" class="responsive-link">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    <span>🔌</span>
+                    {{ __('WooCommerce') }}
                 </span>
             </x-responsive-nav-link>
 

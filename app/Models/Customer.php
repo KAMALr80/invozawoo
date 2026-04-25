@@ -49,7 +49,8 @@ class Customer extends Model
 
         // Audit
         'created_by',
-        'updated_by'
+        'updated_by',
+        'woocommerce_customer_id'
     ];
 
     protected $casts = [

@@ -58,7 +58,8 @@ class Sale extends Model
 
         // Audit
         'created_by',
-        'updated_by'
+        'updated_by',
+        'woocommerce_order_id'
     ];
 
     protected $casts = [
