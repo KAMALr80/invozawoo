@@ -35,7 +35,12 @@ class WoocommerceController extends Controller
         ]);
 
         try {
-            $syncedIds = $this->woocommerceUtil->syncProducts($request->product_id);
+            $result = $this->woocommerceUtil->syncProducts($request->product_id);
+            
+            if (!empty($result['errors'])) {
+                return redirect()->back()->with('error', 'Sync completed with errors: ' . implode(', ', $result['errors']));
+            }
+
             return redirect()->back()->with('success', 'Product synced successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Sync failed: ' . $e->getMessage());
@@ -78,8 +83,14 @@ class WoocommerceController extends Controller
     public function syncProducts()
     {
         try {
-            $syncedIds = $this->woocommerceUtil->syncProducts();
-            return redirect()->back()->with('success', count($syncedIds) . ' products synced successfully.');
+            $result = $this->woocommerceUtil->syncProducts();
+            $msg = count($result['synced_ids']) . ' products synced successfully.';
+            
+            if (!empty($result['errors'])) {
+                return redirect()->back()->with('warning', $msg . ' But some failed: ' . implode('; ', array_slice($result['errors'], 0, 3)) . '...');
+            }
+
+            return redirect()->back()->with('success', $msg);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Sync failed: ' . $e->getMessage());
         }
