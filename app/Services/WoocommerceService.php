@@ -152,7 +152,11 @@ class WoocommerceService
                     'catalog_visibility' => 'visible',
                 ];
 
-                $item['images'] = [['src' => $product->image_url]];
+                // Only add image if it's not the placeholder
+                $imageUrl = $product->image_url;
+                if ($product->image && !str_contains($imageUrl, 'no-image.png')) {
+                    $item['images'] = [['src' => $imageUrl]];
+                }
 
                 if ($product->woocommerce_product_id) {
                     $item['id'] = $product->woocommerce_product_id;
@@ -169,6 +173,7 @@ class WoocommerceService
 
             try {
                 $response = Http::withBasicAuth($this->key, $this->secret)
+                    ->connectTimeout(30)
                     ->timeout(60) // Reduced timeout per chunk
                     ->post("{$this->url}/wp-json/wc/v3/products/batch", $batchData);
 
@@ -177,8 +182,9 @@ class WoocommerceService
                     
                     // Process Created
                     foreach ($data['create'] ?? [] as $item) {
-                        if (isset($item['id']) && isset($item['sku'])) {
-                            $product = $idMap[$item['sku']] ?? null;
+                        $sku = $item['sku'] ?? 'Unknown';
+                        if (isset($item['id'])) {
+                            $product = $idMap[$sku] ?? null;
                             if ($product) {
                                 $product->update([
                                     'woocommerce_product_id' => $item['id'],
@@ -188,21 +194,22 @@ class WoocommerceService
                             }
                         } else if (isset($item['error'])) {
                             $overallResults['failed_count']++;
-                            $overallResults['errors'][] = "Create Error (SKU: " . ($item['sku'] ?? 'N/A') . "): " . ($item['error']['message'] ?? 'Unknown');
+                            $overallResults['errors'][] = "Create Error (SKU: {$sku}): " . ($item['error']['message'] ?? 'Unknown');
                         }
                     }
 
                     // Process Updated
                     foreach ($data['update'] ?? [] as $item) {
-                        if (isset($item['id']) && isset($item['sku'])) {
-                            $product = $idMap[$item['sku']] ?? null;
+                        $sku = $item['sku'] ?? 'Unknown';
+                        if (isset($item['id'])) {
+                            $product = $idMap[$sku] ?? null;
                             if ($product) {
                                 $product->update(['synced_at' => now()]);
                                 $overallResults['success_count']++;
                             }
                         } else if (isset($item['error'])) {
                             $overallResults['failed_count']++;
-                            $overallResults['errors'][] = "Update Error (SKU: " . ($item['sku'] ?? 'N/A') . "): " . ($item['error']['message'] ?? 'Unknown');
+                            $overallResults['errors'][] = "Update Error (SKU: {$sku}): " . ($item['error']['message'] ?? 'Unknown');
                         }
                     }
                 } else {
