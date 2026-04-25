@@ -31,7 +31,7 @@ class WoocommerceUtil
             [
                 'wp_api' => true,
                 'version' => 'wc/v3',
-                'timeout' => 30,
+                'timeout' => 120, // Increased timeout to handle slow responses or large image processing
                 'verify_ssl' => false
             ]
         );
