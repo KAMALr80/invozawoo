@@ -29,53 +29,40 @@ class WoocommerceUtil
     /**
      * Upload image to WordPress media library first
      */
-    private function uploadImageToWordPress($wc, $imagePath, $productId = null)
+    /**
+     * Upload image to WordPress media library first
+     */
+    private function uploadImageToWordPress($imagePath)
     {
         try {
-            // Get full image URL
-            if (filter_var($imagePath, FILTER_VALIDATE_URL)) {
-                $imageUrl = $imagePath;
-            } else {
-                $imageUrl = asset('storage/' . $imagePath);
-            }
+            $s = DB::table('woocommerce_settings')->first();
+            if (!$s) return null;
 
+            // Get full image URL
+            $imageUrl = filter_var($imagePath, FILTER_VALIDATE_URL) ? $imagePath : asset('storage/' . $imagePath);
             Log::info("Uploading image: " . $imageUrl);
 
-            // Download image temporarily
+            // Download image
             $imageContent = @file_get_contents($imageUrl);
-            if (!$imageContent) {
-                throw new Exception("Cannot download image from: " . $imageUrl);
-            }
+            if (!$imageContent) throw new Exception("Cannot download image from: " . $imageUrl);
 
-            // Get image info
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_buffer($finfo, $imageContent);
             finfo_close($finfo);
 
-            // Determine file extension
             $extension = match($mimeType) {
-                'image/jpeg' => 'jpg',
-                'image/png' => 'png',
-                'image/gif' => 'gif',
-                'image/webp' => 'webp',
-                default => 'jpg'
+                'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp', default => 'jpg'
             };
 
-            // Create temp file
-            $tempPath = tempnam(sys_get_temp_dir(), 'woo_img_');
-            file_put_contents($tempPath, $imageContent);
-
             // Upload using WordPress REST API
-            $uploadUrl = rtrim($wc->getUrl(), '/') . '/wp-json/wp/v2/media';
-            
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $uploadUrl);
+            curl_setopt($ch, CURLOPT_URL, rtrim($s->store_url, '/') . '/wp-json/wp/v2/media');
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents($tempPath));
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $imageContent);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Content-Type: ' . $mimeType,
                 'Content-Disposition: attachment; filename=product_' . time() . '.' . $extension,
-                'Authorization: Basic ' . base64_encode($wc->getConsumerKey() . ':' . $wc->getConsumerSecret())
+                'Authorization: Basic ' . base64_encode($s->consumer_key . ':' . $s->consumer_secret)
             ]);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -83,7 +70,6 @@ class WoocommerceUtil
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            unlink($tempPath);
 
             if ($httpCode === 201 || $httpCode === 200) {
                 $mediaData = json_decode($response);
@@ -92,9 +78,7 @@ class WoocommerceUtil
                     return $mediaData->id;
                 }
             }
-
             throw new Exception("Upload failed with HTTP code: " . $httpCode);
-
         } catch (Exception $e) {
             Log::error("Image upload error: " . $e->getMessage());
             return null;
@@ -172,7 +156,7 @@ class WoocommerceUtil
 
                 // 4. Handle image upload if exists
                 if ($p->image && !empty($p->image)) {
-                    $mediaId = $this->uploadImageToWordPress($wc, $p->image, $p->woocommerce_product_id);
+                    $mediaId = $this->uploadImageToWordPress($p->image);
                     if ($mediaId) {
                         $data['images'] = [['id' => $mediaId]];
                         $p->woocommerce_media_id = $mediaId;
