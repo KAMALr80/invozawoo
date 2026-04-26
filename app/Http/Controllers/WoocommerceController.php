@@ -171,7 +171,7 @@ public function getSyncStats()
             'products_synced' => \App\Models\Product::whereNotNull('woocommerce_product_id')->count(),
             'orders_synced' => \App\Models\Sale::whereNotNull('woocommerce_order_id')->count(),
             'customers_synced' => \App\Models\Customer::whereNotNull('woocommerce_customer_id')->count(),
-            'last_sync' => optional($settings)->updated_at?->diffForHumans()
+            'last_sync' => $settings && $settings->updated_at ? \Carbon\Carbon::parse($settings->updated_at)->diffForHumans() : 'Never'
         ]
     ]);
 }

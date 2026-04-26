@@ -29,9 +29,6 @@ class WoocommerceUtil
     /**
      * Upload image to WordPress media library first
      */
-    /**
-     * Upload image to WordPress media library first
-     */
     private function uploadImageToWordPress($imagePath)
     {
         try {
@@ -42,9 +39,21 @@ class WoocommerceUtil
             $imageUrl = filter_var($imagePath, FILTER_VALIDATE_URL) ? $imagePath : asset('storage/' . $imagePath);
             Log::info("Uploading image: " . $imageUrl);
 
-            // Download image
-            $imageContent = @file_get_contents($imageUrl);
-            if (!$imageContent) throw new Exception("Cannot download image from: " . $imageUrl);
+            // Download image using cURL (more robust than file_get_contents)
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $imageUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $imageContent = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if (!$imageContent || $httpCode !== 200) {
+                throw new Exception("Cannot download image from: " . $imageUrl . " (HTTP: " . $httpCode . ")");
+            }
 
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_buffer($finfo, $imageContent);
