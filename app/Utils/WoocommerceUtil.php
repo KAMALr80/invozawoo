@@ -163,16 +163,28 @@ class WoocommerceUtil
                     'categories' => $catIds
                 ];
 
-                // 4. Handle image upload if exists
+                // 4. Handle image - Simpler & More Robust
                 if ($p->image && !empty($p->image)) {
-                    $mediaId = $this->uploadImageToWordPress($p->image);
-                    if ($mediaId) {
-                        $data['images'] = [['id' => $mediaId]];
-                        $p->woocommerce_media_id = $mediaId;
-                        $p->save();
-                    } elseif (str_contains($p->image, 'http')) {
-                        // Fallback to direct URL
+                    if (str_contains($p->image, 'http')) {
+                        // If it's an external URL (Bing/Google), send it directly as 'src'
+                        // WooCommerce's internal downloader is more reliable for this.
                         $data['images'] = [['src' => $p->image]];
+                    } else {
+                        // Local file - try to upload to WordPress media library
+                        if (!$p->woocommerce_media_id) {
+                            $mediaId = $this->uploadImageToWordPress($p->image);
+                            if ($mediaId) {
+                                $p->woocommerce_media_id = $mediaId;
+                                $p->save();
+                            }
+                        }
+                        
+                        if ($p->woocommerce_media_id) {
+                            $data['images'] = [['id' => (int)$p->woocommerce_media_id]];
+                        } else {
+                            // Fallback to local asset URL
+                            $data['images'] = [['src' => asset('storage/' . $p->image)]];
+                        }
                     }
                 }
 
