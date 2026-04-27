@@ -238,9 +238,44 @@ class InventoryController extends Controller
 
         $product->update($data);
 
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Product updated successfully!',
+                'redirect' => route('inventory.index')
+            ]);
+        }
+
         return redirect()->route('inventory.index')
             ->with('success', 'Product updated successfully!');
     }
+
+    // ================= REMOVE IMAGE AJAX =================
+    public function removeImageAjax($id)
+    {
+        try {
+            $product = Product::findOrFail($id);
+
+            if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
+                Storage::disk('public')->delete($product->image);
+            }
+
+            $product->image = null;
+            $product->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Image removed successfully!'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Remove Image Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error removing image: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 
     // ================= SHOW =================
     public function show($id)

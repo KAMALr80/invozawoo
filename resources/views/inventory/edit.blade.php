@@ -530,7 +530,7 @@
         border: 2px solid var(--border);
     }
 
-    .remove-image-label {
+    .remove-image-btn {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -539,23 +539,22 @@
         padding: 10px 20px;
         border-radius: var(--radius-md);
         transition: all 0.3s ease;
-    }
-
-    .remove-image-label:hover {
-        background: #fecaca;
-    }
-
-    .remove-image-checkbox {
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-    }
-
-    .remove-image-text {
+        border: none;
         color: var(--danger);
-        font-weight: 500;
+        font-weight: 600;
         font-size: 14px;
     }
+
+    .remove-image-btn:hover {
+        background: #fecaca;
+        transform: translateY(-1px);
+    }
+
+    .remove-image-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
 
     /* ================= IMAGE TYPE TOGGLE ================= */
     .image-toggle {
@@ -1146,7 +1145,8 @@
             </div>
 
             <!-- Form -->
-            <form method="POST" action="{{ route('inventory.update', $product->id) }}" enctype="multipart/form-data" class="form-content">
+            <form id="editProductForm" method="POST" action="{{ route('inventory.update', $product->id) }}" enctype="multipart/form-data" class="form-content">
+
                 @csrf
                 @method('PUT')
 
@@ -1341,10 +1341,11 @@
                                     class="current-image"
                                     onerror="this.onerror=null; this.src='{{ asset('images/no-image.png') }}';">
 
-                                <label class="remove-image-label">
-                                    <input type="checkbox" name="remove_image" value="1" class="remove-image-checkbox">
+                                <button type="button" id="removeImageBtn" class="remove-image-btn" onclick="removeProductImage('{{ $product->id }}')">
+                                    <span>🗑️</span>
                                     <span class="remove-image-text">Remove current image</span>
-                                </label>
+                                </button>
+
                             </div>
                         </div>
                     @endif
@@ -1563,28 +1564,131 @@
         }
     }
 
-    // Form submit handling to ensure custom category is sent correctly
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const submitBtn = this.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<div class="loading-spinner" style="width: 18px; height: 18px; border-width: 2px;"></div> <span>Syncing to Website...</span>';
-            submitBtn.style.opacity = '0.8';
-        }
+    // ========== TOAST NOTIFICATION ==========
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        toast.style.background = type === 'success' ? 'var(--success)' : 'var(--danger)';
+        toast.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span>${type === 'success' ? '✅' : '❌'}</span>
+                <span>${message}</span>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 
+    // ========== AJAX IMAGE REMOVAL ==========
+    async function removeProductImage(productId) {
+        if (!confirm('Are you sure you want to remove the current image?')) return;
+        
+        const btn = document.getElementById('removeImageBtn');
+        const originalContent = btn.innerHTML;
+        
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading-spinner" style="width: 16px; height: 16px; border-width: 2px;"></div> Removing...';
+            
+            const response = await fetch(`/inventory/${productId}/remove-image`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                document.querySelector('.current-image-card').remove();
+                showToast(data.message);
+            } else {
+                showToast(data.message || 'Error removing image', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('An unexpected error occurred', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    }
+
+    // Form submit handling with AJAX for fast updates
+    document.getElementById('editProductForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const form = this;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalBtnContent = submitBtn.innerHTML;
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="loading-spinner" style="width: 18px; height: 18px; border-width: 2px;"></div> <span>Syncing to Website...</span>';
+        submitBtn.style.opacity = '0.8';
+
+        // Prepare Category (Handle "Other")
         const categorySelect = document.getElementById('category_select');
         const customInput = document.getElementById('custom_category');
-        const useCustomHidden = document.getElementById('use_custom_category');
-
+        
+        const formData = new FormData(form);
         if (categorySelect.value === 'Other' && customInput.value.trim() !== '') {
-            const hiddenCategory = document.createElement('input');
-            hiddenCategory.type = 'hidden';
-            hiddenCategory.name = 'category';
-            hiddenCategory.value = customInput.value.trim();
-            categorySelect.disabled = true;
-            this.appendChild(hiddenCategory);
+            formData.set('category', customInput.value.trim());
+        }
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showToast(data.message);
+                
+                // Optional: Redirect or stay on page
+                // Staying on page but clearing "Syncing" state
+                setTimeout(() => {
+                    window.location.href = data.redirect || '{{ route('inventory.index') }}';
+                }, 1000);
+            } else {
+                // Handle Validation Errors
+                if (data.errors) {
+                    let errorMsg = Object.values(data.errors).flat().join('\n');
+                    showToast(errorMsg || 'Validation failed', 'error');
+                } else {
+                    showToast(data.message || 'Error updating product', 'error');
+                }
+                
+                // Reset button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
+                submitBtn.style.opacity = '1';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('An unexpected error occurred', 'error');
+            
+            // Reset button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnContent;
+            submitBtn.style.opacity = '1';
         }
     });
+
 
     // Handle window resize for sidebar
     window.addEventListener('resize', function() {

@@ -378,7 +378,9 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{inventory}', [InventoryController::class, 'destroy'])->name('destroy');
         Route::get('/search', [InventoryController::class, 'ajaxSearch'])->name('ajax.search');
         Route::post('/{id}/update-quantity', [InventoryController::class, 'updateQuantity'])->name('update.quantity');
+        Route::post('/{id}/remove-image', [InventoryController::class, 'removeImageAjax'])->name('remove-image');
         Route::post('/bulk-delete', [InventoryController::class, 'bulkDelete'])->name('bulk.delete');
+
         Route::post('/barcode-preview', [InventoryController::class, 'barcodePreview'])->name('barcode.preview');
         Route::post('/barcode-download', [InventoryController::class, 'barcodeDownload'])->name('barcode.download');
     });
