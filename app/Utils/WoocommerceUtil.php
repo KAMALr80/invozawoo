@@ -38,20 +38,27 @@ class WoocommerceUtil
             $s = DB::table('woocommerce_settings')->first();
             if (!$s) return null;
 
-            $imageUrl = filter_var($imagePath, FILTER_VALIDATE_URL) ? $imagePath : asset('storage/' . $imagePath);
+            $isUrl = filter_var($imagePath, FILTER_VALIDATE_URL);
+            $imageUrl = $isUrl ? $imagePath : asset('storage/' . $imagePath);
             
-            // Download image
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $imageUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            $imageContent = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            // If it's a local file, we can try to get its content directly instead of cURL
+            if (!$isUrl) {
+                $imageContent = Storage::disk('public')->get($imagePath);
+            } else {
+                // External Download
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $imageUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                $imageContent = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                if ($httpCode !== 200) $imageContent = null;
+            }
 
-            if (!$imageContent || $httpCode !== 200) return null;
+            if (!$imageContent) return null;
 
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_buffer($finfo, $imageContent);
@@ -61,16 +68,23 @@ class WoocommerceUtil
                 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp', default => 'jpg'
             };
 
-            $filename = 'woo_sync_' . md5($imagePath) . '.' . $extension;
-            $path = 'public/woocommerce_temp/' . $filename;
-            
-            // Save to public storage
-            Storage::put($path, $imageContent);
-            
-            // Return the public URL of OUR server
-            return asset('storage/woocommerce_temp/' . $filename);
+            // If it's an external URL, proxy it through our server
+            if ($isUrl) {
+                $filename = 'woo_sync_' . md5($imagePath) . '.' . $extension;
+                $path = 'public/woocommerce_temp/' . $filename;
+                
+                // Save to public storage if not already there
+                if (!Storage::exists($path)) {
+                    Storage::put($path, $imageContent);
+                }
+                
+                return asset('storage/woocommerce_temp/' . $filename);
+            }
+
+            // If it's already local, just return the direct public URL
+            return asset('storage/' . $imagePath);
         } catch (Exception $e) {
-            Log::error("Proxy download error: " . $e->getMessage());
+            Log::error("Image handling error: " . $e->getMessage());
             return null;
         }
     }
@@ -144,27 +158,35 @@ class WoocommerceUtil
                     'categories' => $catIds
                 ];
 
-                // 4. Handle image - Proxy Download Strategy
+                // 4. Handle image - Optimized for Local & External
                 if (!empty($p->image)) {
                     $imgData = [];
                     
-                    // Always try to proxy download to our server first
-                    $proxyUrl = $this->uploadImageToWordPress($p->image);
-                    
-                    if ($proxyUrl && filter_var($proxyUrl, FILTER_VALIDATE_URL)) {
-                        // Use our server's URL - WooCommerce will definitely accept this
-                        $imgData = [
-                            'src' => $proxyUrl,
-                            'name' => $p->name,
-                            'alt' => $p->name
-                        ];
+                    if (str_contains($p->image, 'http')) {
+                        // Case A: External URL (Bing/Google) - Use Proxy
+                        $proxyUrl = $this->uploadImageToWordPress($p->image);
+                        $imgData = ['src' => $proxyUrl ?: $p->image, 'name' => $p->name];
                     } else {
-                        // Fallback to original URL or local asset
-                        $fallbackUrl = str_contains($p->image, 'http') ? $p->image : asset('storage/' . $p->image);
-                        $imgData = [
-                            'src' => $fallbackUrl,
-                            'name' => $p->name
-                        ];
+                        // Case B: Local File - Upload to WP Media Library for permanence
+                        // Check if already uploaded to WP Media
+                        if (!$p->woocommerce_media_id) {
+                            // We use the same proxy method which handles local paths too
+                            // but for local files it will return a direct path
+                            $mediaId = $this->uploadImageToWordPress($p->image);
+                            // If it returned a URL instead of ID, we'll try to find its ID or just use src
+                            if (is_numeric($mediaId)) {
+                                $p->woocommerce_media_id = $mediaId;
+                                $p->save();
+                            }
+                        }
+
+                        if ($p->woocommerce_media_id && is_numeric($p->woocommerce_media_id)) {
+                            $imgData = ['id' => (int)$p->woocommerce_media_id];
+                        } else {
+                            // Fallback to our server's public URL
+                            $localUrl = asset('storage/' . $p->image);
+                            $imgData = ['src' => $localUrl, 'name' => $p->name];
+                        }
                     }
 
                     if (!empty($imgData)) {

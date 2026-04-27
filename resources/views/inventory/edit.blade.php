@@ -1565,22 +1565,23 @@
 
     // Form submit handling to ensure custom category is sent correctly
     document.querySelector('form').addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loading-spinner" style="width: 18px; height: 18px; border-width: 2px;"></div> <span>Syncing to Website...</span>';
+            submitBtn.style.opacity = '0.8';
+        }
+
         const categorySelect = document.getElementById('category_select');
         const customInput = document.getElementById('custom_category');
         const useCustomHidden = document.getElementById('use_custom_category');
 
         if (categorySelect.value === 'Other' && customInput.value.trim() !== '') {
-            // Set the category select value to custom input value
-            // Create a hidden input to override the select
             const hiddenCategory = document.createElement('input');
             hiddenCategory.type = 'hidden';
             hiddenCategory.name = 'category';
             hiddenCategory.value = customInput.value.trim();
-
-            // Disable the original select so it doesn't get submitted
             categorySelect.disabled = true;
-
-            // Add the hidden input
             this.appendChild(hiddenCategory);
         }
     });

@@ -21,19 +21,20 @@ class ProductObserver
      */
     public function saved(Product $product)
     {
-        try {
-            $settings = DB::table('woocommerce_settings')->first();
-            
-            // Check if global auto-sync is enabled
-            if ($settings && ($settings->is_sync_enabled ?? false)) {
-                // Check if this specific product has sync disabled
-                if (!$product->woocommerce_sync_disabled) {
-                    Log::info("Auto-syncing product: {$product->name}");
-                    $this->woocommerceUtil->syncProducts($product->id);
+        // Run sync AFTER the response has been sent to the user for maximum speed
+        dispatch(function() use ($product) {
+            try {
+                $settings = DB::table('woocommerce_settings')->first();
+                
+                if ($settings && ($settings->is_sync_enabled ?? false)) {
+                    if (!$product->woocommerce_sync_disabled) {
+                        Log::info("Background auto-syncing product: {$product->name}");
+                        $this->woocommerceUtil->syncProducts($product->id);
+                    }
                 }
+            } catch (\Exception $e) {
+                Log::error("Auto-sync observer error: " . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            Log::error("Auto-sync observer error: " . $e->getMessage());
-        }
+        })->afterResponse();
     }
 }
