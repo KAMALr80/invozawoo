@@ -43,19 +43,31 @@ class WoocommerceUtil
             
             // If it's a local file, we can try to get its content directly instead of cURL
             if (!$isUrl) {
-                $imageContent = Storage::disk('public')->get($imagePath);
+                if (Storage::disk('public')->exists($imagePath)) {
+                    $imageContent = Storage::disk('public')->get($imagePath);
+                } else {
+                    Log::error("Local image not found: " . $imagePath);
+                    $imageContent = null;
+                }
             } else {
                 // External Download
+                Log::info("Attempting to download external image: " . $imageUrl);
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, $imageUrl);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                 $imageContent = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlError = curl_error($ch);
                 curl_close($ch);
-                if ($httpCode !== 200) $imageContent = null;
+                
+                if ($httpCode !== 200) {
+                    Log::error("Failed to download image. HTTP Code: {$httpCode}. URL: {$imageUrl}. Error: {$curlError}");
+                    $imageContent = null;
+                }
             }
 
             if (!$imageContent) return null;

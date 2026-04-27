@@ -93,5 +93,6 @@ CMD export CACHE_DRIVER=file && \
     sed -i "s/:80/:${PORT}/g" /etc/apache2/sites-available/000-default.conf && \
     php artisan config:clear && \
     php artisan config:cache && \
+    php artisan storage:link --force && \
     php artisan migrate --force && \
     apache2-foreground
