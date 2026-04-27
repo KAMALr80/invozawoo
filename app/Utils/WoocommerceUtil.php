@@ -163,28 +163,42 @@ class WoocommerceUtil
                     'categories' => $catIds
                 ];
 
-                // 4. Handle image - Simpler & More Robust
-                if ($p->image && !empty($p->image)) {
+                // 4. Handle image - Aggressive Proxy Download Strategy
+                if (!empty($p->image)) {
+                    $imgData = [];
+                    $imageToSync = $p->image;
+
+                    // If it's an external URL, download it to our server first to avoid blocking
                     if (str_contains($p->image, 'http')) {
-                        // If it's an external URL (Bing/Google), send it directly as 'src'
-                        // WooCommerce's internal downloader is more reliable for this.
-                        $data['images'] = [['src' => $p->image]];
+                        try {
+                            $localMediaId = $this->uploadImageToWordPress($p->image);
+                            if ($localMediaId) {
+                                $imgData = ['id' => (int)$localMediaId];
+                                $p->woocommerce_media_id = $localMediaId;
+                                $p->save();
+                            } else {
+                                // If Media API upload fails, we still send the URL as fallback
+                                $imgData = ['src' => $p->image, 'name' => $p->name];
+                            }
+                        } catch (Exception $e) {
+                            $imgData = ['src' => $p->image, 'name' => $p->name];
+                        }
                     } else {
-                        // Local file - try to upload to WordPress media library
-                        if (!$p->woocommerce_media_id) {
-                            $mediaId = $this->uploadImageToWordPress($p->image);
-                            if ($mediaId) {
+                        // Local storage file
+                        $mediaId = $p->woocommerce_media_id ?: $this->uploadImageToWordPress($p->image);
+                        if ($mediaId) {
+                            $imgData = ['id' => (int)$mediaId];
+                            if (!$p->woocommerce_media_id) {
                                 $p->woocommerce_media_id = $mediaId;
                                 $p->save();
                             }
-                        }
-                        
-                        if ($p->woocommerce_media_id) {
-                            $data['images'] = [['id' => (int)$p->woocommerce_media_id]];
                         } else {
-                            // Fallback to local asset URL
-                            $data['images'] = [['src' => asset('storage/' . $p->image)]];
+                            $imgData = ['src' => asset('storage/' . $p->image), 'name' => $p->name];
                         }
+                    }
+
+                    if (!empty($imgData)) {
+                        $data['images'] = [$imgData];
                     }
                 }
 
