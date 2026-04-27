@@ -29,67 +29,48 @@ class WoocommerceUtil
     /**
      * Upload image to WordPress media library first
      */
+    /**
+     * Proxy Download: Download external image to ERP storage so WooCommerce can fetch it from us
+     */
     private function uploadImageToWordPress($imagePath)
     {
         try {
             $s = DB::table('woocommerce_settings')->first();
             if (!$s) return null;
 
-            // Get full image URL
             $imageUrl = filter_var($imagePath, FILTER_VALIDATE_URL) ? $imagePath : asset('storage/' . $imagePath);
-            Log::info("Uploading image: " . $imageUrl);
-
-            // Download image using cURL (more robust than file_get_contents)
+            
+            // Download image
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $imageUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             $imageContent = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if (!$imageContent || $httpCode !== 200) {
-                throw new Exception("Cannot download image from: " . $imageUrl . " (HTTP: " . $httpCode . ")");
-            }
+            if (!$imageContent || $httpCode !== 200) return null;
 
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_buffer($finfo, $imageContent);
             finfo_close($finfo);
 
             $extension = match($mimeType) {
-                'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp', default => 'jpg'
+                'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp', default => 'jpg'
             };
 
-            // Upload using WordPress REST API
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, rtrim($s->store_url, '/') . '/wp-json/wp/v2/media');
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $imageContent);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Content-Type: ' . $mimeType,
-                'Content-Disposition: attachment; filename=product_' . time() . '.' . $extension,
-                'Authorization: Basic ' . base64_encode($s->consumer_key . ':' . $s->consumer_secret)
-            ]);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $filename = 'woo_sync_' . md5($imagePath) . '.' . $extension;
+            $path = 'public/woocommerce_temp/' . $filename;
             
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($httpCode === 201 || $httpCode === 200) {
-                $mediaData = json_decode($response);
-                if ($mediaData && isset($mediaData->id)) {
-                    Log::info("Image uploaded successfully. Media ID: " . $mediaData->id);
-                    return $mediaData->id;
-                }
-            }
-            throw new Exception("Upload failed with HTTP code: " . $httpCode);
+            // Save to public storage
+            Storage::put($path, $imageContent);
+            
+            // Return the public URL of OUR server
+            return asset('storage/woocommerce_temp/' . $filename);
         } catch (Exception $e) {
-            Log::error("Image upload error: " . $e->getMessage());
+            Log::error("Proxy download error: " . $e->getMessage());
             return null;
         }
     }
@@ -163,38 +144,27 @@ class WoocommerceUtil
                     'categories' => $catIds
                 ];
 
-                // 4. Handle image - Aggressive Proxy Download Strategy
+                // 4. Handle image - Proxy Download Strategy
                 if (!empty($p->image)) {
                     $imgData = [];
-                    $imageToSync = $p->image;
-
-                    // If it's an external URL, download it to our server first to avoid blocking
-                    if (str_contains($p->image, 'http')) {
-                        try {
-                            $localMediaId = $this->uploadImageToWordPress($p->image);
-                            if ($localMediaId) {
-                                $imgData = ['id' => (int)$localMediaId];
-                                $p->woocommerce_media_id = $localMediaId;
-                                $p->save();
-                            } else {
-                                // If Media API upload fails, we still send the URL as fallback
-                                $imgData = ['src' => $p->image, 'name' => $p->name];
-                            }
-                        } catch (Exception $e) {
-                            $imgData = ['src' => $p->image, 'name' => $p->name];
-                        }
+                    
+                    // Always try to proxy download to our server first
+                    $proxyUrl = $this->uploadImageToWordPress($p->image);
+                    
+                    if ($proxyUrl && filter_var($proxyUrl, FILTER_VALIDATE_URL)) {
+                        // Use our server's URL - WooCommerce will definitely accept this
+                        $imgData = [
+                            'src' => $proxyUrl,
+                            'name' => $p->name,
+                            'alt' => $p->name
+                        ];
                     } else {
-                        // Local storage file
-                        $mediaId = $p->woocommerce_media_id ?: $this->uploadImageToWordPress($p->image);
-                        if ($mediaId) {
-                            $imgData = ['id' => (int)$mediaId];
-                            if (!$p->woocommerce_media_id) {
-                                $p->woocommerce_media_id = $mediaId;
-                                $p->save();
-                            }
-                        } else {
-                            $imgData = ['src' => asset('storage/' . $p->image), 'name' => $p->name];
-                        }
+                        // Fallback to original URL or local asset
+                        $fallbackUrl = str_contains($p->image, 'http') ? $p->image : asset('storage/' . $p->image);
+                        $imgData = [
+                            'src' => $fallbackUrl,
+                            'name' => $p->name
+                        ];
                     }
 
                     if (!empty($imgData)) {

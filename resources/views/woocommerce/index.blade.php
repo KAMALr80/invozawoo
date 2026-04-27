@@ -554,19 +554,32 @@
                 <div class="card-body">
                     <form action="{{ route('woocommerce.sync-single-product') }}" method="POST" id="singleSyncForm">
                         @csrf
-                        <div class="form-group">
-                            <label class="form-label">Select Product</label>
-                            <select name="product_id" class="form-control-modern select2-single" style="width: 100%; padding: 14px;">
-                                <option value=""></option>
-                                @foreach($products as $product)
-                                    <option value="{{ $product->id }}" data-synced="{{ $product->woocommerce_product_id ? 'true' : 'false' }}">
-                                        {{ $product->name }} ({{ $product->product_code }}) - ₹{{ number_format($product->price, 2) }}
-                                        @if($product->woocommerce_product_id) ✓ @endif
-                                    </option>
-                                @endforeach
-                            </select>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label class="form-label">Select Product</label>
+                                    <select name="product_id" id="productSelect" class="form-control-modern select2-single" style="width: 100%; padding: 14px;">
+                                        <option value=""></option>
+                                        @foreach($products as $product)
+                                            @php
+                                                $imgUrl = $product->image ? (str_contains($product->image, 'http') ? $product->image : asset('storage/' . $product->image)) : asset('images/no-image.png');
+                                            @endphp
+                                            <option value="{{ $product->id }}" data-image="{{ $imgUrl }}" data-synced="{{ $product->woocommerce_product_id ? 'true' : 'false' }}">
+                                                {{ $product->name }} ({{ $product->product_code }}) - ₹{{ number_format($product->price, 2) }}
+                                                @if($product->woocommerce_product_id) ✓ @endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div id="productPreviewContainer" style="width: 100%; height: 100px; background: var(--gray-50); border: 2px dashed var(--gray-200); border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                    <img id="productPreviewImg" src="" style="max-width: 100%; max-height: 100%; display: none;">
+                                    <i id="previewPlaceholder" class="fas fa-image" style="font-size: 30px; color: var(--gray-300);"></i>
+                                </div>
+                            </div>
                         </div>
-                        <button type="submit" class="btn-modern btn-primary btn-block">
+                        <button type="submit" class="btn-modern btn-primary btn-block mt-3">
                             <i class="fas fa-sync-alt"></i> Sync Product Now
                         </button>
                     </form>
@@ -760,6 +773,20 @@ $(document).ready(function() {
         placeholder: 'Search for a product...',
         allowClear: true,
         width: '100%'
+    });
+
+    // Handle Product Selection Preview
+    $('#productSelect').on('change', function() {
+        const selectedOption = $(this).find('option:selected');
+        const imgUrl = selectedOption.data('image');
+        
+        if (imgUrl) {
+            $('#productPreviewImg').attr('src', imgUrl).fadeIn();
+            $('#previewPlaceholder').hide();
+        } else {
+            $('#productPreviewImg').hide();
+            $('#previewPlaceholder').fadeIn();
+        }
     });
 
     // Load stats
