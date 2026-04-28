@@ -1842,6 +1842,25 @@
                     <span style="font-size: 14px; font-weight: 500;">Search anything...</span>
                     <span style="margin-left: auto; font-size: 10px; font-weight: 800; background: var(--bg-white); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">Ctrl + /</span>
                 </div>
+
+                {{-- Quick Create Action Buttons --}}
+                <div class="quick-create-actions" style="display: flex; align-items: center; gap: 10px; margin-left: 20px;">
+                    @if (auth()->user()->hasPermission('view_sales'))
+                        <a href="{{ route('sales.create') }}" class="btn-quick-create btn-qc-sales" style="display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%); color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); transition: all 0.3s;">
+                            <i class="fas fa-cash-register"></i> Create POS
+                        </a>
+                    @endif
+                    @if (auth()->user()->hasPermission('view_employees') || auth()->user()->hasPermission('edit_employees'))
+                        <a href="{{ route('employees.create') }}" class="btn-quick-create btn-qc-employee" style="display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); transition: all 0.3s;">
+                            <i class="fas fa-user-plus"></i> Add Employee
+                        </a>
+                    @endif
+                    @if (auth()->user()->hasPermission('view_customers'))
+                        <a href="{{ route('customers.create') }}" class="btn-quick-create btn-qc-customer" style="display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--secondary) 0%, #4f46e5 100%); color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3); transition: all 0.3s;">
+                            <i class="fas fa-address-book"></i> Add Customer
+                        </a>
+                    @endif
+                </div>
             </div>
 
             <div class="user-section" style="display: flex; align-items: center; gap: 20px;">

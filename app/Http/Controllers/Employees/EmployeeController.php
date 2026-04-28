@@ -11,6 +11,8 @@ use App\Mail\EmployeeEmail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
 
 class EmployeeController extends Controller
 {
@@ -92,7 +94,33 @@ class EmployeeController extends Controller
         $search  = $request->input('search');
         $perPage = $request->input('per_page', 10);
 
-        $employees = Employee::query()
+        $query = Employee::query();
+
+        // Calculate Stats
+        $totalEmployees = Employee::count();
+        $activeEmployees = Employee::where('status', 1)->count();
+        $departmentsCount = Employee::distinct('department')->count('department');
+        $recentJoiningsCount = Employee::where('joining_date', '>=', now()->subDays(30))->count();
+
+        // Department Stats for Chart
+        $departmentStats = Employee::select('department', DB::raw('count(*) as count'))
+            ->groupBy('department')
+            ->get();
+
+        // Monthly Hiring Trend (Last 6 Months)
+        $hiringTrend = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $count = Employee::whereYear('joining_date', $month->year)
+                ->whereMonth('joining_date', $month->month)
+                ->count();
+            $hiringTrend[] = [
+                'month' => $month->format('M'),
+                'count' => $count
+            ];
+        }
+
+        $employees = $query
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('name', 'like', "%{$search}%")
@@ -105,7 +133,17 @@ class EmployeeController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        return view('employees.index', compact('employees', 'search', 'perPage'));
+        return view('employees.index', compact(
+            'employees', 
+            'search', 
+            'perPage', 
+            'totalEmployees', 
+            'activeEmployees', 
+            'departmentsCount', 
+            'recentJoiningsCount',
+            'departmentStats',
+            'hiringTrend'
+        ));
     }
 
     /* ================= SHOW ================= */
