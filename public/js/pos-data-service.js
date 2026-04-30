@@ -138,6 +138,31 @@ const DataService = (function() {
                 console.error('Sync Error:', error);
                 throw error;
             }
+        },
+        
+        /**
+         * Download latest data from server
+         */
+        downloadData: async function() {
+            if (!navigator.onLine) {
+                throw new Error('OFFLINE');
+            }
+
+            try {
+                const response = await fetch('/pos/sync-data');
+                if (!response.ok) throw new Error('Failed to fetch data');
+                
+                const result = await response.json();
+                if (result.success) {
+                    this.bootstrap(result.products, result.customers);
+                    return result;
+                } else {
+                    throw new Error(result.message || 'Download failed');
+                }
+            } catch (error) {
+                console.error('Download Error:', error);
+                throw error;
+            }
         }
     };
 })();

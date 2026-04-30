@@ -13,6 +13,7 @@
     <title>INVOZA One - @yield('page-title', 'Dashboard')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="manifest" href="/manifest.json">
 
     <!-- DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
@@ -1877,6 +1878,11 @@
                     </div>
                 @endif
 
+                <div id="networkStatus" style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; transition: all 0.3s ease;">
+                    <i class="fas fa-circle" style="font-size: 8px;"></i>
+                    <span id="networkText">Checking...</span>
+                </div>
+
                 <div id="themeToggle" onclick="toggleTheme()" style="display: flex; align-items: center; gap: 10px; background: var(--bg-light); padding: 6px; border-radius: 30px; border: 1px solid var(--border); cursor: pointer;">
                    <div style="width: 34px; height: 34px; background: var(--bg-white); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); color: var(--text-muted); font-size: 11px; font-weight: 700;">Light</div>
                    <div style="color: var(--text-muted); font-size: 14px; padding-right: 10px;"><i class="fas fa-moon"></i></div>
@@ -2462,6 +2468,40 @@
         // Poll for notifications every 30 seconds
         setInterval(fetchNotifications, 30000);
         document.addEventListener('DOMContentLoaded', fetchNotifications);
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW: Registered', reg))
+                    .catch(err => console.error('SW: Failed', err));
+            });
+        }
+
+        // Network Status Logic
+        function updateNetworkStatus() {
+            const status = document.getElementById('networkStatus');
+            const text = document.getElementById('networkText');
+            if (!status || !text) return;
+
+            if (navigator.onLine) {
+                status.style.background = 'rgba(16, 185, 129, 0.1)';
+                status.style.color = '#10b981';
+                status.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+                text.textContent = 'ONLINE';
+                status.querySelector('i').style.color = '#10b981';
+            } else {
+                status.style.background = 'rgba(239, 68, 68, 0.1)';
+                status.style.color = '#ef4444';
+                status.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                text.textContent = 'OFFLINE MODE';
+                status.querySelector('i').style.color = '#ef4444';
+            }
+        }
+
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+        document.addEventListener('DOMContentLoaded', updateNetworkStatus);
     </script>
 
     {{-- ================= PAGE SPECIFIC SCRIPTS ================= --}}

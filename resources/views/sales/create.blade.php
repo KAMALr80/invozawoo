@@ -1237,7 +1237,13 @@
                             <p class="header-subtitle">Step 1: Select customer → Step 2: Add products → Step 3: Shipping</p>
                         </div>
                     </div>
-                    <div id="clearCustomerContainer" style="display: none;">
+                    <div class="header-right" style="display: flex; gap: 10px; align-items: center;">
+                        <button type="button" id="btnDownloadData" onclick="downloadOfflineData()" class="btn-quick-create" style="background: linear-gradient(135deg, var(--info) 0%, #0ea5e9 100%); color: white; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);">
+                            <i class="fas fa-cloud-download-alt"></i>
+                            <span>Download Offline Data</span>
+                        </button>
+
+                        <div id="clearCustomerContainer" style="display: none;">
                         <button type="button" onclick="InvoiceManager.clearCustomerSelection()" class="btn-clear-customer">
                             <span>✕</span> Clear Customer
                         </button>
@@ -2644,5 +2650,35 @@
             InvoiceManager.init();
         });
         window.InvoiceManager = InvoiceManager;
+        // Download Offline Data Logic
+        async function downloadOfflineData() {
+            const btn = document.getElementById('btnDownloadData');
+            const originalHtml = btn.innerHTML;
+            
+            if (!navigator.onLine) {
+                InvoiceManager.showToast('You are offline. Cannot download data.', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Downloading...</span>';
+            btn.style.opacity = '0.7';
+
+            try {
+                await DataService.downloadData();
+                InvoiceManager.showToast('Offline data updated successfully!', 'success');
+                
+                // Refresh local products/customers in memory
+                InvoiceManager.products = DataService.getProducts();
+                InvoiceManager.customers = DataService.getCustomers();
+                
+            } catch (error) {
+                InvoiceManager.showToast('Failed to download data: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                btn.style.opacity = '1';
+            }
+        }
     </script>
 @endsection
