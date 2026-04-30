@@ -888,10 +888,16 @@ private function createShipmentFromSale($sale, $request)
     public function show($id)
     {
         try {
-            // Try finding by primary ID or invoice_token
-            $sale = Sale::where('id', $id)
-                ->orWhere('invoice_token', $id)
-                ->with([
+            // First, try to find by invoice_token (exact match)
+            $sale = Sale::where('invoice_token', $id)->first();
+
+            // If not found by token and ID is numeric, try finding by primary ID
+            if (!$sale && is_numeric($id)) {
+                $sale = Sale::find($id);
+            }
+
+            if ($sale) {
+                $sale->load([
                     'customer',
                     'items.product',
                     'payments',
@@ -900,8 +906,8 @@ private function createShipmentFromSale($sale, $request)
                             $tq->latest()->limit(1);
                         }]);
                     }
-                ])
-                ->first();
+                ]);
+            }
         } catch (\Throwable $e) {
             $sale = null;
         }
