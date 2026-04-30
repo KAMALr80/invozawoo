@@ -27,6 +27,7 @@ use App\Http\Controllers\Sales\SalesController;
 use App\Http\Controllers\Purchases\PurchaseController;
 use App\Http\Controllers\Customers\CustomerController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\CreditMemoController;
 
 // Payments & Wallet
 use App\Http\Controllers\Payments\PaymentController;
@@ -191,6 +192,7 @@ Route::post('/sales/send-invoice', [SalesController::class, 'sendInvoice'])->nam
 Route::post('/sales/bulk-send-invoice', [SalesController::class, 'bulkSendInvoice'])->name('sales.bulk-send-invoice');
 Route::post('/sales/send-due-reminder', [SalesController::class, 'sendDueReminder'])->name('sales.send-due-reminder');
 Route::post('/sales/bulk-send-due-reminders', [SalesController::class, 'bulkSendDueReminders'])->name('sales.bulk-send-due-reminders');
+Route::post('/sync-invoice', [SalesController::class, 'syncInvoice'])->name('sales.sync');
 
 /*
 |--------------------------------------------------------------------------
@@ -305,6 +307,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/datatable', [SalesController::class, 'datatable'])->name('datatable');
         Route::get('/stats', [SalesController::class, 'stats'])->name('stats');
         Route::get('/{sale}', [SalesController::class, 'show'])->name('show');
+        Route::get('/show/{sale}', [SalesController::class, 'show']); // Fallback for old JS cache
         Route::get('/{sale}/invoice', [SalesController::class, 'invoice'])->name('invoice');
         Route::get('/{sale}/print', [SalesController::class, 'print'])->name('print');
         Route::get('/{sale}/edit', [SalesController::class, 'edit'])->name('edit');
@@ -314,6 +317,15 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{saleId}/delete-with-payments', [SalesController::class, 'deleteWithPayments'])->name('delete-with-payments');
         Route::get('/{id}/delete-impact', [SalesController::class, 'deleteImpact'])->name('delete-impact');
         Route::get('/{sale}/create-shipment', [SalesController::class, 'createShipment'])->name('sales.create-shipment');
+        Route::get('/ajax/by-customer', [SalesController::class, 'getByCustomer'])->name('ajax.by-customer');
+    });
+
+    /* ================= CREDIT MEMOS ================= */
+    Route::prefix('credit-memos')->name('credit-memos.')->group(function () {
+        Route::get('/', [CreditMemoController::class, 'index'])->name('index');
+        Route::get('/create/{sale}', [CreditMemoController::class, 'create'])->name('create');
+        Route::post('/store/{sale}', [CreditMemoController::class, 'store'])->name('store');
+        Route::get('/{creditMemo}', [CreditMemoController::class, 'show'])->name('show');
     });
 
     /* ================= PURCHASES ================= */

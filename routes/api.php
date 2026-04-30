@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\DB;
 |
 */
 
+// OFFLINE POS SYNC API (Moved to web.php for better session handling)
+
 // ============================================================
 // TEST ROUTE - Check if API is working
 // ============================================================

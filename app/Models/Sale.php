@@ -59,7 +59,8 @@ class Sale extends Model
         // Audit
         'created_by',
         'updated_by',
-        'woocommerce_order_id'
+        'woocommerce_order_id',
+        'refunded_amount'
     ];
 
     protected $casts = [
@@ -98,6 +99,7 @@ class Sale extends Model
         'preferred_delivery_time' => 'string',
         'shipping_status' => 'string',
         'place_id' => 'string',
+        'refunded_amount' => 'decimal:2',
     ];
 
     /* ==================== EXISTING RELATIONSHIPS ==================== */
@@ -132,6 +134,14 @@ class Sale extends Model
     public function latestPayment()
     {
         return $this->hasOne(Payment::class)->latestOfMany();
+    }
+
+    /**
+     * Get the credit memos for this sale
+     */
+    public function creditMemos()
+    {
+        return $this->hasMany(CreditMemo::class);
     }
 
     /**
@@ -661,6 +671,19 @@ class Sale extends Model
         $this->save();
 
         return $this->payment_status;
+    }
+
+    /**
+     * Update status based on refunded amount
+     */
+    public function updateStatusBasedOnRefund()
+    {
+        if ($this->refunded_amount >= $this->grand_total) {
+            $this->payment_status = 'refunded';
+        } elseif ($this->refunded_amount > 0) {
+            $this->payment_status = 'partially_refunded';
+        }
+        $this->save();
     }
 
     /**

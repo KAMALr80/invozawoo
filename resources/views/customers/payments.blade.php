@@ -788,14 +788,17 @@
         $currentBalance = $walletTransactions->first()?->balance ?? 0;
 
         // ========== SMART DUE CALCULATION ==========
-        // Total Invoice Amount
-        $totalInvoiceAmount = $invoices->sum('grand_total');
+        // Total Invoice Amount (Net after refunds)
+        $totalInvoiceAmount = $invoices->sum('grand_total') - $invoices->sum('refunded_amount');
         
         // Total Paid Amount (Cash + Wallet Used)
         $totalPaidAmount = $allPayments
             ->where('status', 'paid')
             ->whereIn('remarks', ['INVOICE', 'EMI_DOWN', 'ADVANCE_USED'])
             ->sum('amount');
+        
+        // Total Refunded
+        $totalRefunded = $invoices->sum('refunded_amount');
         
         // Total Due Amount (Invoice Total - Paid Amount)
         $totalDueAmount = max(0, $totalInvoiceAmount - $totalPaidAmount);
@@ -864,6 +867,7 @@
                 'wallet_added' => $walletAdded,
                 'total_received' => $totalReceivedForInvoice,
                 'applied' => $appliedToThisInvoice,
+                'refunded' => $inv->refunded_amount ?? 0,
                 'due' => $dueAmount,
                 'status' => $status,
                 'payment_count' => $invoicePayments->count(),
@@ -921,6 +925,12 @@
                         <span class="breakdown-label">✅ Total Paid:</span>
                         <span class="breakdown-value success">{{ formatCurrency($totalPaidAmount) }}</span>
                     </div>
+                    @if($totalRefunded > 0)
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">🔄 Total Refunded:</span>
+                        <span class="breakdown-value danger">{{ formatCurrency($totalRefunded) }}</span>
+                    </div>
+                    @endif
                     <div class="breakdown-item">
                         <span class="breakdown-label">💰 Wallet Balance:</span>
                         <span class="breakdown-value {{ $currentBalance > 0 ? 'success' : 'text-muted' }}">
@@ -1054,6 +1064,7 @@
                                 <th class="text-right">Grand Total</th>
                                 <th class="text-right">Cash Paid</th>
                                 <th class="text-right">Wallet Used</th>
+                                <th class="text-right">Refunded</th>
                                 <th class="text-right">Wallet Added</th>
                                 <th class="text-right">Total Received</th>
                                 <th class="text-right">Applied</th>
@@ -1092,6 +1103,7 @@
                                     <td class="text-right">{{ formatCurrency($inv['grand_total']) }}</td>
                                     <td class="text-right text-primary">{{ formatCurrency($inv['cash_paid']) }}</td>
                                     <td class="text-right text-purple">{{ formatCurrency($inv['wallet_used']) }}</td>
+                                    <td class="text-right text-danger">{{ formatCurrency($inv['refunded']) }}</td>
                                     <td class="text-right text-warning">{{ formatCurrency($inv['wallet_added']) }}</td>
                                     <td class="text-right text-success fw-bold">
                                         {{ formatCurrency($inv['total_received']) }}</td>

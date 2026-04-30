@@ -1765,6 +1765,9 @@
                         <a href="{{ route('sales.index') }}?status=pending" class="dropdown-item">
                             <i class="fas fa-hourglass-half"></i> Pending Orders
                         </a>
+                        <a href="{{ route('credit-memos.index') }}" class="dropdown-item">
+                            <i class="fas fa-undo-alt"></i> Credit Memo
+                        </a>
                     </ul>
                 </div>
             @endif

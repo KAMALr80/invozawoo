@@ -9,6 +9,8 @@ use App\Services\AttendanceService;
 use App\Services\LeaveService;
 use Illuminate\Pagination\Paginator;
 
+use Illuminate\Support\Facades\Auth;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -38,6 +40,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Override Eloquent User Provider for Offline POS Support
+        Auth::provider('eloquent', function ($app, array $config) {
+            return new \App\Auth\OfflineUserProvider($app['hash'], $config['model']);
+        });
+
         // Force HTTPS in production (Render / Cloud hosting)
         //  if (config('app.env') === 'production' || env('APP_FORCE_HTTPS', true)) {
         if (config('app.env') === 'production' || (env('APP_FORCE_HTTPS', false) && !app()->isLocal())) {
@@ -49,19 +56,25 @@ class AppServiceProvider extends ServiceProvider
 
         // Pass pending counts to sidebar
         view()->composer('layouts.app', function ($view) {
-            if (auth()->check()) {
-                $pendingStaffCount = \App\Models\User::where('role', 'staff')
-                    ->whereNotIn('status', ['approved', 'rejected'])
-                    ->count();
-                $pendingAgentCount = \App\Models\DeliveryAgent::whereNotIn('approval_status', ['approved', 'rejected'])
-                    ->count();
-                $pendingHrCount = \App\Models\User::where('role', 'hr')
-                    ->whereNotIn('status', ['approved', 'rejected'])
-                    ->count();
+            try {
+                if (auth()->check()) {
+                    $pendingStaffCount = \App\Models\User::where('role', 'staff')
+                        ->whereNotIn('status', ['approved', 'rejected'])
+                        ->count();
+                    $pendingAgentCount = \App\Models\DeliveryAgent::whereNotIn('approval_status', ['approved', 'rejected'])
+                        ->count();
+                    $pendingHrCount = \App\Models\User::where('role', 'hr')
+                        ->whereNotIn('status', ['approved', 'rejected'])
+                        ->count();
 
-                $view->with('sidebarPendingStaff', $pendingStaffCount);
-                $view->with('sidebarPendingAgent', $pendingAgentCount);
-                $view->with('sidebarPendingHr', $pendingHrCount);
+                    $view->with('sidebarPendingStaff', $pendingStaffCount);
+                    $view->with('sidebarPendingAgent', $pendingAgentCount);
+                    $view->with('sidebarPendingHr', $pendingHrCount);
+                }
+            } catch (\Throwable $e) {
+                $view->with('sidebarPendingStaff', 0);
+                $view->with('sidebarPendingAgent', 0);
+                $view->with('sidebarPendingHr', 0);
             }
         });
         // Register Observers for Notifications

@@ -1,0 +1,14 @@
+{
+    "name": "GlobalSearch",
+    "alias": "globalsearch",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\GlobalSearch\\Providers\\GlobalSearchServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

@@ -15,7 +15,6 @@ class Payment extends Model
         'status',
         'transaction_id',
         'remarks',
-        'payment_date',
         'wallet_id',           // Link to wallet transaction
         'source_wallet_id',    // For tracking which advance was used
         'emi_months',           // Number of EMI months
@@ -27,7 +26,6 @@ class Payment extends Model
         'amount' => 'decimal:2',
         'down_payment' => 'decimal:2',
         'emi_amount' => 'decimal:2',
-        'payment_date' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];
@@ -233,6 +231,7 @@ class Payment extends Model
             'ADVANCE_ONLY' => '#f59e0b',
             'ADVANCE_USED' => '#8b5cf6',
             'EXCESS_TO_ADVANCE' => '#3b82f6',
+            'REFUND_TO_WALLET', 'REFUND_OUT' => '#ef4444',
             default => '#6b7280'
         };
     }
@@ -249,6 +248,8 @@ class Payment extends Model
             'ADVANCE_ONLY' => 'Pure Advance',
             'ADVANCE_USED' => 'Advance Used',
             'EXCESS_TO_ADVANCE' => 'Excess to Advance',
+            'REFUND_TO_WALLET' => 'Refund to Wallet',
+            'REFUND_OUT' => 'Refund Paid Out',
             default => $this->remarks ?? 'Payment'
         };
     }

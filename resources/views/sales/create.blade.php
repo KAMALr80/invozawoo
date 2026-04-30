@@ -1547,11 +1547,14 @@
     <script
         src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google.maps_api_key') }}&libraries=places&callback=initAddressAutocomplete"
         async defer></script>
+    <script src="{{ asset('js/pos-data-service.js') }}"></script>
 
     <script>
         const InvoiceManager = (function() {
             let state = {
                 products: @json($products),
+                customers: @json($customers),
+                invoice_token: "{{ $invoice_token }}",
                 isCustomerSelected: false,
                 isSavingCustomer: false,
                 isScannerEnabled: false,
@@ -1560,7 +1563,8 @@
                 customerTimer: null,
                 autocompleteService: null,
                 placesService: null,
-                isGettingLocation: false
+                isGettingLocation: false,
+                selectedCustomer: null
             };
 
             const elements = {
@@ -1929,6 +1933,19 @@
             }
 
             function init() {
+                // Bootstrap local data
+                DataService.bootstrap(state.products, state.customers);
+                
+                // Offline Fallback: If server data is empty, load from local storage
+                if (!state.products || state.products.length === 0) {
+                    console.log('Offline Mode: Loading products from local cache');
+                    state.products = DataService.getProducts();
+                }
+                if (!state.customers || state.customers.length === 0) {
+                    console.log('Offline Mode: Loading customers from local cache');
+                    state.customers = DataService.getCustomers();
+                }
+                
                 disableBarcodeScanner();
                 attachEventListeners();
                 loadCustomerFromUrl();
@@ -1970,26 +1987,23 @@
             }
 
             function performCustomerSearch(query) {
-                fetch(`{{ route('customers.ajax.search') }}?search=${encodeURIComponent(query)}`)
-                    .then(res => res.json())
-                    .then(customers => {
-                        elements.customerResults.innerHTML = '';
-                        if (customers.length === 0) {
-                            elements.customerResults.innerHTML = getNoCustomersHTML();
-                            elements.customerResults.style.display = 'block';
-                            return;
-                        }
-                        customers.forEach((customer, index) => {
-                            elements.customerResults.appendChild(createCustomerElement(customer, index,
-                                customers.length));
-                        });
-                        elements.customerResults.style.display = 'block';
-                    })
-                    .catch(error => {
-                        console.error('Search error:', error);
-                        elements.customerResults.innerHTML = getSearchErrorHTML();
-                        elements.customerResults.style.display = 'block';
-                    });
+                const search = query.toLowerCase();
+                const customers = state.customers.filter(c => 
+                    (c.name && c.name.toLowerCase().includes(search)) || 
+                    (c.mobile && c.mobile.includes(search))
+                );
+
+                elements.customerResults.innerHTML = '';
+                if (customers.length === 0) {
+                    elements.customerResults.innerHTML = getNoCustomersHTML();
+                    elements.customerResults.style.display = 'block';
+                    return;
+                }
+                
+                customers.forEach((customer, index) => {
+                    elements.customerResults.appendChild(createCustomerElement(customer, index, customers.length));
+                });
+                elements.customerResults.style.display = 'block';
             }
 
             function createCustomerElement(customer, index, total) {
@@ -2010,6 +2024,7 @@
             }
 
             function selectCustomer(customer) {
+                state.selectedCustomer = customer;
                 if (elements.customerIdInput) elements.customerIdInput.value = customer.id;
                 if (elements.customerSearch) {
                     elements.customerSearch.value = customer.name;
@@ -2208,7 +2223,7 @@
                             <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                                 ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHTML(p.name)}" class="product-image-sm" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
                                 <div class="product-image-placeholder sm" style="${imageUrl ? 'display:none;' : 'display:flex;'}">${escapeHTML(p.name?.charAt(0) || 'P')}</div>
-                                <div><div style="font-weight:600; color:#374151;">${escapeHTML(p.name || 'Product')}</div><div style="font-size:12px; color:#64748b;">Code: ${escapeHTML(p.product_code || 'N/A')}</div></div>
+                                <div><div class="product-name" style="font-weight:600; color:#374151;">${escapeHTML(p.name || 'Product')}</div><div style="font-size:12px; color:#64748b;">Code: ${escapeHTML(p.product_code || 'N/A')}</div></div>
                             </div>
                             <input type="hidden" name="items[product_id][]" value="${escapeHTML(p.id)}">
                         </td>
@@ -2388,56 +2403,53 @@
                 event.preventDefault();
                 if (!state.isCustomerSelected) {
                     showToast('Please select a customer first', 'error');
-                    if (elements.customerSearch) {
-                        elements.customerSearch.focus();
-                        elements.customerSearch.classList.add('shake');
-                        setTimeout(() => elements.customerSearch.classList.remove('shake'), 500);
-                    }
                     return false;
                 }
-                const hasProducts = document.querySelectorAll('#itemsTable tr[data-pid]').length > 0;
-                if (!hasProducts) {
+                const productRows = document.querySelectorAll('#itemsTable tr[data-pid]');
+                if (productRows.length === 0) {
                     showToast('Please add at least one product', 'error');
-                    if (elements.productSearch) {
-                        elements.productSearch.focus();
-                        elements.productSearch.classList.add('shake');
-                        setTimeout(() => elements.productSearch.classList.remove('shake'), 500);
-                    }
                     return false;
                 }
-                if (elements.requiresShipping && elements.requiresShipping.checked) {
-                    const shippingAddress = elements.shippingAddress?.value.trim();
-                    const city = elements.city?.value.trim();
-                    const stateName = elements.state?.value.trim();
-                    const pincode = elements.pincode?.value.trim();
-                    if (!shippingAddress) {
-                        showToast('Shipping address is required', 'error');
-                        elements.shippingAddress?.focus();
-                        return false;
-                    }
-                    if (!city) {
-                        showToast('City is required', 'error');
-                        elements.city?.focus();
-                        return false;
-                    }
-                    if (!stateName) {
-                        showToast('State is required', 'error');
-                        elements.state?.focus();
-                        return false;
-                    }
-                    if (!pincode) {
-                        showToast('Pincode is required', 'error');
-                        elements.pincode?.focus();
-                        return false;
-                    }
-                }
+
                 const btn = document.getElementById('saveBtn');
                 if (btn) {
                     btn.disabled = true;
-                    btn.innerHTML = `<span class="btn-icon spin">⏳</span>Processing...`;
+                    btn.innerHTML = `<span class="btn-icon spin">⏳</span>Saving Locally...`;
                 }
-                showToast('Creating invoice...', 'info');
-                document.getElementById('invoiceForm').submit();
+
+                // Collect Invoice Data
+                const invoiceData = {
+                    invoice_token: state.invoice_token,
+                    customer: state.selectedCustomer,
+                    items: [],
+                    totals: {
+                        subtotal: parseFloat(document.getElementById('sub_total').value),
+                        discount: parseFloat(document.getElementById('total_discount').value),
+                        tax_percent: parseFloat(document.getElementById('tax').value),
+                        tax_amount: parseFloat(document.getElementById('tax_amount').value),
+                        grand_total: parseFloat(document.getElementById('grand_total').value)
+                    }
+                };
+
+                productRows.forEach(row => {
+                    invoiceData.items.push({
+                        product_id: row.dataset.pid,
+                        name: row.querySelector('.product-name')?.textContent,
+                        quantity: parseFloat(row.querySelector('.qty').value),
+                        price: parseFloat(row.querySelector('[name="items[price][]"]').value)
+                    });
+                });
+
+                // Save to LocalStorage
+                DataService.saveInvoice(invoiceData);
+
+                showToast('Invoice saved locally! Redirecting...', 'success');
+                
+                // Redirect to show page (which will load from localStorage if not in DB)
+                setTimeout(() => {
+                    window.location.href = `/sales/${state.invoice_token}`;
+                }, 1000);
+
                 return false;
             }
 

@@ -166,6 +166,18 @@
             color: #0f172a;
         }
 
+        .header-btn.return {
+            background: rgba(220, 38, 38, 0.2);
+            border-color: rgba(220, 38, 38, 0.4);
+            color: #fca5a5;
+        }
+
+        .header-btn.return:hover {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+
         /* ================= CUSTOMER SECTION ================= */
         .customer-section {
             padding: clamp(1.25rem, 3vw, 1.5rem) clamp(1.5rem, 4vw, 2rem);
@@ -1571,18 +1583,29 @@
                                 {{ strtoupper($sale->payment_status) }}
                             </div>
                             <div class="header-actions">
+                                @if(isset($local_token))
+                                    <button id="syncBtn" class="header-btn" onclick="handleSync()" title="Sync this invoice to server" style="background: #10b981; color: white;">
+                                        🔄 Sync to Server
+                                    </button>
+                                @endif
                                 <button class="header-btn" onclick="copyInvoiceNo()" title="Copy Invoice Number">
                                     📋 Copy
                                 </button>
-                                <a href="{{ route('sales.print', $sale->id) }}" class="header-btn" target="_blank"
-                                    title="Print Invoice">
-                                    🖨️ Print
-                                </a>
-                                {{-- ✅ MODIFIED: Direct PDF Download Button --}}
-                                <a href="{{ route('sales.invoice', $sale->id) }}" class="header-btn"
-                                    title="Download Invoice PDF" download>
-                                    📥 Invoice Download
-                                </a>
+                                @if($sale->id)
+                                    <a href="{{ route('sales.print', $sale->id) }}" class="header-btn" target="_blank"
+                                        title="Print Invoice">
+                                        🖨️ Print
+                                    </a>
+                                    {{-- ✅ MODIFIED: Direct PDF Download Button --}}
+                                    <a href="{{ route('sales.invoice', $sale->id) }}" class="header-btn"
+                                        title="Download Invoice PDF" download>
+                                        📥 Invoice Download
+                                    </a>
+                                    <a href="{{ route('credit-memos.create', ['sale' => $sale->id]) }}" class="header-btn return"
+                                        title="Issue Sales Return / Credit Memo">
+                                        🔄 Issue Return
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -1606,10 +1629,10 @@
                     <div>
                         <div class="customer-label">Invoice Details</div>
                         <div class="customer-value">
-                            Date: {{ \Carbon\Carbon::parse($sale->sale_date)->format('d M, Y') }}
+                            Date: {{ $sale->sale_date ? \Carbon\Carbon::parse($sale->sale_date)->format('d M, Y') : 'N/A' }}
                         </div>
                         <div class="customer-detail">
-                            <div>📅 Created: {{ $sale->created_at->format('d M Y h:i A') }}</div>
+                            <div>📅 Created: {{ $sale->created_at ? $sale->created_at->format('d M Y h:i A') : 'N/A' }}</div>
                             <div>🆔 Invoice #{{ $sale->invoice_no }}</div>
                         </div>
                     </div>
@@ -1716,10 +1739,14 @@
                                 style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.5); border-radius: var(--radius-md);">
                                 <p style="color: #6d28d9; margin: 0;">
                                     <span>⏳</span> No shipments created yet for this invoice.
-                                    <a href="{{ route('logistics.shipments.create', ['sale_id' => $sale->id]) }}"
-                                        style="color: #5b21b6; font-weight: 600; text-decoration: underline; margin-left: 0.5rem;">
-                                        Create Shipment
-                                    </a>
+                                    @if($sale->id)
+                                        <a href="{{ route('logistics.shipments.create', ['sale_id' => $sale->id]) }}"
+                                            style="color: #5b21b6; font-weight: 600; text-decoration: underline; margin-left: 0.5rem;">
+                                            Create Shipment
+                                        </a>
+                                    @else
+                                        <span style="color: #6b7280; font-size: 0.8rem; margin-left: 0.5rem;">(Sync required to create shipment)</span>
+                                    @endif
                                 </p>
                             </div>
                         @endif
@@ -1729,23 +1756,38 @@
                 {{-- ================= WALLET BALANCE ================= --}}
                 @if ($sale->customer)
                     @php
-                        $customer = $sale->customer;
-                        $latestWallet = \App\Models\CustomerWallet::where('customer_id', $customer->id)
-                            ->orderBy('created_at', 'desc')
-                            ->first();
-                        $walletBalance = $latestWallet ? $latestWallet->balance : 0;
+                        try {
+                            $customer = $sale->customer;
+                            $latestWallet = $customer ? \App\Models\CustomerWallet::where('customer_id', $customer->id)
+                                ->orderBy('created_at', 'desc')
+                                ->first() : null;
+                            $walletBalance = $latestWallet ? $latestWallet->balance : 0;
 
-                        $allPayments = $sale->payments->where('status', 'paid');
-                        $totalReceived = $allPayments->sum('amount');
-                        $invoicePayments = $allPayments->whereIn('remarks', ['INVOICE', 'EMI_DOWN'])->sum('amount');
-                        $walletUsed = $allPayments->where('remarks', 'ADVANCE_USED')->sum('amount');
-                        $advancePayments = $allPayments
-                            ->whereIn('remarks', ['EXCESS_TO_ADVANCE', 'ADVANCE_ONLY', 'WALLET_ADD'])
-                            ->sum('amount');
-                        $appliedToInvoice = $invoicePayments + $walletUsed;
-                        $remainingDue = max(0, $sale->grand_total - $appliedToInvoice);
-                        $excessAmount = max(0, $totalReceived - $sale->grand_total);
-                        $netPosition = $totalReceived - $sale->grand_total;
+                            $allPayments = $sale->payments ? $sale->payments->where('status', 'paid') : collect();
+                            $totalReceived = $allPayments->sum('amount');
+                            $invoicePayments = $allPayments->whereIn('remarks', ['INVOICE', 'EMI_DOWN'])->sum('amount');
+                            $walletUsed = $allPayments->where('remarks', 'ADVANCE_USED')->sum('amount');
+                            $advancePayments = $allPayments
+                                ->whereIn('remarks', ['EXCESS_TO_ADVANCE', 'ADVANCE_ONLY', 'WALLET_ADD'])
+                                ->sum('amount');
+                            $effectiveGrandTotal = $sale->grand_total - ($sale->refunded_amount ?? 0);
+                            $appliedToInvoice = $invoicePayments + $walletUsed;
+                            $remainingDue = max(0, $effectiveGrandTotal - $appliedToInvoice);
+                            $excessAmount = max(0, $totalReceived - $effectiveGrandTotal);
+                            $netPosition = $totalReceived - $effectiveGrandTotal;
+                        } catch (\Throwable $e) {
+                            // Offline Fallback: Default everything to 0 if DB is down
+                            $walletBalance = 0;
+                            $totalReceived = 0;
+                            $invoicePayments = 0;
+                            $walletUsed = 0;
+                            $advancePayments = 0;
+                            $effectiveGrandTotal = $sale->grand_total;
+                            $appliedToInvoice = 0;
+                            $remainingDue = $sale->grand_total;
+                            $excessAmount = 0;
+                            $netPosition = 0;
+                        }
                     @endphp
 
                     <div class="wallet-grid">
@@ -1956,7 +1998,7 @@
                                     style="background: #f1f5f9; padding: 0.5rem 1rem; border-radius: 2rem; font-weight: 600;">
                                     Total: ₹{{ number_format($totalReceived, 2) }}
                                 </span>
-                                @if ($sale->payments->count() > 1)
+                                @if($sale->id && $sale->payments->count() > 1)
                                     <button type="button" class="btn-sm btn-danger"
                                         onclick="bulkDeletePayments({{ $sale->id }}, '{{ $sale->invoice_no }}', {{ $totalReceived }})">
                                         🗑️ Delete All ({{ $sale->payments->count() }})
@@ -1979,6 +2021,14 @@
                             <div class="payment-value paid">₹{{ number_format($totalReceived, 2) }}</div>
                             <div class="payment-sub">{{ $sale->payments->count() }} transaction(s)</div>
                         </div>
+
+                        @if($sale->refunded_amount > 0)
+                        <div class="payment-card due" style="border-left: 5px solid var(--danger);">
+                            <div class="payment-label">Total Refunded</div>
+                            <div class="payment-value due">₹{{ number_format($sale->refunded_amount, 2) }}</div>
+                            <div class="payment-sub">Sales Return / Refund</div>
+                        </div>
+                        @endif
 
                         <div class="payment-card invoice">
                             <div class="payment-label">Applied to Invoice</div>
@@ -2144,21 +2194,24 @@
 
                     {{-- Action Buttons --}}
                     <div class="action-buttons">
-                        @if ($remainingDue > 0 || $sale->payment_status == 'unpaid')
-                            <a href="{{ route('payments.create', $sale->id) }}" class="btn-primary-lg">➕ Add Payment</a>
+                        @if($sale->id)
+                            @if ($remainingDue > 0 || $sale->payment_status == 'unpaid')
+                                <a href="{{ route('payments.create', $sale->id) }}" class="btn-primary-lg">➕ Add Payment</a>
+                            @endif
+                            @if ($sale->payment_status != 'paid' && $sale->payment_status != 'emi')
+                                <a href="{{ route('sales.edit', $sale->id) }}" class="btn-secondary-lg">✏️ Edit Invoice</a>
+                            @endif
+                            @if ($sale->requires_shipping && $sale->shipments->count() == 0)
+                                <a href="{{ route('logistics.shipments.create', ['sale_id' => $sale->id]) }}"
+                                    class="btn-purple-lg">
+                                    📦 Create Shipment
+                                </a>
+                            @endif
+                            <a href="{{ route('credit-memos.create', ['sale' => $sale->id]) }}" class="btn-secondary-lg" style="border-color: #ef4444; color: #ef4444;">🔄 Issue Sales Return</a>
+                            <a href="{{ route('customers.payments', $sale->customer_id) }}" class="btn-secondary-lg">👤
+                                Customer
+                                History</a>
                         @endif
-                        @if ($sale->payment_status != 'paid' && $sale->payment_status != 'emi')
-                            <a href="{{ route('sales.edit', $sale->id) }}" class="btn-secondary-lg">✏️ Edit Invoice</a>
-                        @endif
-                        @if ($sale->requires_shipping && $sale->shipments->count() == 0)
-                            <a href="{{ route('logistics.shipments.create', ['sale_id' => $sale->id]) }}"
-                                class="btn-purple-lg">
-                                📦 Create Shipment
-                            </a>
-                        @endif
-                        <a href="{{ route('customers.payments', $sale->customer_id) }}" class="btn-secondary-lg">👤
-                            Customer
-                            History</a>
                     </div>
 
                     {{-- EMI Details --}}
@@ -2198,6 +2251,45 @@
                             </div>
                         </div>
                     @endif
+
+                    {{-- Credit Memos Section --}}
+                    @if ($sale->creditMemos && $sale->creditMemos->count() > 0)
+                        <div class="payments-section" style="border-top: 2px solid var(--danger); background: #fff5f5;">
+                            <h3 class="section-title" style="color: var(--danger);">🔄 Sales Returns (Credit Memos)</h3>
+                            <div class="table-responsive">
+                                <table class="payments-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>CM Number</th>
+                                            <th>Type</th>
+                                            <th class="text-right">Refund Amount</th>
+                                            <th>Status</th>
+                                            <th class="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($sale->creditMemos as $cm)
+                                            <tr>
+                                                <td>{{ $cm->created_at->format('d M Y') }}</td>
+                                                <td><span class="fw-bold">{{ $cm->cm_number }}</span></td>
+                                                <td>{{ ucfirst($cm->type) }}</td>
+                                                <td class="text-right fw-bold text-danger">₹{{ number_format($cm->refund_amount, 2) }}</td>
+                                                <td>
+                                                    <span class="status-badge {{ $cm->status }}" style="padding: 0.2rem 0.75rem; font-size: 0.75rem;">
+                                                        {{ strtoupper($cm->status) }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <a href="{{ route('credit-memos.show', $cm->id) }}" class="btn-sm btn-primary">View</a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 {{-- ================= FOOTER ================= --}}
@@ -2211,8 +2303,84 @@
     {{-- ================= TOAST NOTIFICATION ================= --}}
     <div id="toast" class="toast"></div>
 
+    <script src="{{ asset('js/pos-data-service.js') }}"></script>
     <script>
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+        const localToken = '{{ $local_token ?? "" }}';
+
+        // Load local data if this is an offline invoice
+        if (localToken) {
+            const localData = DataService.getInvoice(localToken);
+            if (localData) {
+                // Update UI with local data
+                document.querySelector('.invoice-subtitle').textContent = '#' + (localData.invoice_no || 'OFFLINE');
+                document.querySelector('.customer-value').textContent = localData.customer?.name || 'Walk-in Customer';
+                
+                // Update items table
+                const tbody = document.querySelector('.items-table tbody');
+                if (tbody && localData.items) {
+                    tbody.innerHTML = localData.items.map((item, idx) => `
+                        <tr>
+                            <td>${idx + 1}</td>
+                            <td>
+                                <div style="font-weight: 600;">${item.name || 'Product ' + (item.product_id || '')}</div>
+                            </td>
+                            <td class="text-right"><span class="fw-bold">₹${item.price.toFixed(2)}</span></td>
+                            <td class="text-right"><span class="selling-price">₹${item.price.toFixed(2)}</span></td>
+                            <td class="text-right"><span class="text-muted">—</span></td>
+                            <td class="text-center">${item.quantity}</td>
+                            <td class="text-right fw-bold">₹${(item.quantity * item.price).toFixed(2)}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                // Update totals
+                if (localData.totals) {
+                    document.querySelector('.grand-total .amount').textContent = '₹' + localData.totals.grand_total.toFixed(2);
+                    // Update other totals if needed
+                }
+
+                if (localData.synced) {
+                    const syncBtn = document.getElementById('syncBtn');
+                    if (syncBtn) syncBtn.style.display = 'none';
+                    showToast('This invoice is already synced.', 'info');
+                }
+            }
+        }
+
+        async function handleSync() {
+            const btn = document.getElementById('syncBtn');
+            if (!btn) return;
+
+            try {
+                showLoading();
+                btn.disabled = true;
+                btn.innerHTML = '🔄 Syncing...';
+
+                const result = await DataService.syncInvoice(localToken);
+                
+                hideLoading();
+                showToast('✅ Invoice synced successfully!', 'success');
+                
+                // Reload to show the server-side version
+                setTimeout(() => {
+                    location.href = `/sales/${result.sale_id}`;
+                }, 2000);
+
+            } catch (error) {
+                hideLoading();
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Sync to Server';
+
+                if (error.message === 'OFFLINE') {
+                    alert('❌ Connection Error: You are currently offline. Please check your internet connection.');
+                } else if (error.message === 'DATABASE_ERROR') {
+                    alert('⚠️ Server Alert: The database is currently unreachable. Your data is safe locally; please try syncing again later.');
+                } else {
+                    showToast('❌ Sync failed: ' + error.message, 'error');
+                }
+            }
+        }
 
         function showLoading() {
             document.getElementById('loadingOverlay').style.display = 'flex';
@@ -2231,7 +2399,8 @@
         }
 
         function copyInvoiceNo() {
-            navigator.clipboard.writeText('{{ $sale->invoice_no }}')
+            const no = localToken ? (DataService.getInvoice(localToken)?.invoice_no || 'OFFLINE') : '{{ $sale->invoice_no }}';
+            navigator.clipboard.writeText(no)
                 .then(() => showToast('✅ Invoice number copied!', 'success'))
                 .catch(() => showToast('❌ Failed to copy', 'error'));
         }

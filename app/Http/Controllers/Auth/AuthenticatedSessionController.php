@@ -40,61 +40,70 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        // Validate input
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        try {
+            // Validate input
+            $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
 
-        /* ================= STEP 1: Find user ================= */
-        $user = User::where('email', $request->email)->first();
+            /* ================= STEP 1: Find user ================= */
+            $user = User::where('email', $request->email)->first();
 
-        // Check credentials
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            $this->handleFailedLogin($request);
-            return back()->withErrors([
-                'email' => 'These credentials do not match our records.',
-            ])->withInput($request->only('email'));
-        }
-
-        /* ================= STEP 2: Check account status ================= */
-
-        // Staff approval check
-        if ($user->role === 'staff' && $user->status !== 'approved') {
-            return back()->withErrors([
-                'email' => 'Your account is pending approval. Please wait for admin verification.',
-            ])->withInput($request->only('email'));
-        }
-
-        // Delivery Agent approval check
-        if ($user->role === 'delivery_agent') {
-            $agent = DeliveryAgent::where('user_id', $user->id)->first();
-            if ($agent && $agent->approval_status !== 'approved') {
+            // Check credentials
+            if (!$user || !Hash::check($request->password, $user->password)) {
+                $this->handleFailedLogin($request);
                 return back()->withErrors([
-                    'email' => 'Your agent account is pending admin approval. You will be notified once approved.',
+                    'email' => 'These credentials do not match our records.',
                 ])->withInput($request->only('email'));
             }
+
+            /* ================= STEP 2: Check account status ================= */
+
+            // Staff approval check
+            if ($user->role === 'staff' && $user->status !== 'approved') {
+                return back()->withErrors([
+                    'email' => 'Your account is pending approval. Please wait for admin verification.',
+                ])->withInput($request->only('email'));
+            }
+
+            // Delivery Agent approval check
+            if ($user->role === 'delivery_agent') {
+                $agent = DeliveryAgent::where('user_id', $user->id)->first();
+                if ($agent && $agent->approval_status !== 'approved') {
+                    return back()->withErrors([
+                        'email' => 'Your agent account is pending admin approval. You will be notified once approved.',
+                    ])->withInput($request->only('email'));
+                }
+            }
+
+            /* ================= STEP 3: Check if account is locked ================= */
+            if ($this->isAccountLocked($user)) {
+                $unlockTime = Carbon::parse($user->locked_until)->diffForHumans();
+                return back()->withErrors([
+                    'email' => "Account temporarily locked. Try again {$unlockTime}.",
+                ])->withInput($request->only('email'));
+            }
+
+            /* ================= STEP 4: Reset login attempts on successful password ================= */
+            $user->login_attempts = 0;
+            $user->save();
+
+            // Check if 2FA is enabled
+            if ($user->two_factor_enabled) {
+                return $this->requireTwoFactorVerification($user, $request);
+            }
+
+            // Direct login without 2FA
+            return $this->completeLogin($user, $request);
+        } catch (\Throwable $e) {
+            if (str_contains($e->getMessage(), 'Connection refused') || str_contains($e->getMessage(), '2002')) {
+                return back()->withErrors([
+                    'email' => 'Database connection failed. Please ensure MySQL is running.',
+                ])->withInput($request->only('email'));
+            }
+            throw $e;
         }
-
-        /* ================= STEP 3: Check if account is locked ================= */
-        if ($this->isAccountLocked($user)) {
-            $unlockTime = Carbon::parse($user->locked_until)->diffForHumans();
-            return back()->withErrors([
-                'email' => "Account temporarily locked. Try again {$unlockTime}.",
-            ])->withInput($request->only('email'));
-        }
-
-        /* ================= STEP 4: Reset login attempts on successful password ================= */
-        $user->login_attempts = 0;
-        $user->save();
-
-        // Check if 2FA is enabled
-        if ($user->two_factor_enabled) {
-            return $this->requireTwoFactorVerification($user, $request);
-        }
-
-        // Direct login without 2FA
-        return $this->completeLogin($user, $request);
     }
 
     /**

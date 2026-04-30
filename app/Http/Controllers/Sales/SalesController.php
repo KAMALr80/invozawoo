@@ -44,6 +44,36 @@ class SalesController extends Controller
         'INVOICE_DUE' => 'Marked as Due'
     ];
 
+    public function getByCustomer(Request $request)
+    {
+        $customerId = $request->customer_id;
+        if (!$customerId) {
+            return response()->json(['success' => false, 'message' => 'Customer ID required'], 400);
+        }
+
+        $invoices = Sale::where('customer_id', $customerId)
+            ->with(['items.product'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function($sale) {
+                return [
+                    'id' => $sale->id,
+                    'invoice_no' => $sale->invoice_no,
+                    'sale_date' => $sale->created_at->format('d M Y'),
+                    'grand_total' => (float) $sale->grand_total,
+                    'paid_amount' => (float) $sale->paid_amount,
+                    'refunded_amount' => (float) $sale->refunded_amount,
+                    'payment_status' => $sale->payment_status,
+                    'can_refund' => $sale->refunded_amount < $sale->grand_total
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'invoices' => $invoices
+        ]);
+    }
+
     public function sendInvoice(Request $request)
     {
         try {
@@ -466,54 +496,77 @@ class SalesController extends Controller
 
     public function index(Request $request)
     {
-        $query = Sale::with('customer', 'shipments');
+        try {
+            $query = Sale::with(['customer', 'items', 'shipments']);
 
-        if ($request->status && $request->status != 'all') {
-            $query->where('payment_status', $request->status);
+            if ($request->customer_id) {
+                $query->where('customer_id', $request->customer_id);
+            }
+
+            if ($request->status && $request->status != 'all') {
+                $query->where('payment_status', $request->status);
+            }
+
+            if ($request->has('requires_shipping') && $request->requires_shipping !== '') {
+                $query->where('requires_shipping', $request->requires_shipping);
+            }
+
+            if ($request->search) {
+                $query->where(function ($q) use ($request) {
+                    $q->where('invoice_no', 'LIKE', "%{$request->search}%")
+                        ->orWhereHas('customer', function ($cq) use ($request) {
+                            $cq->where('name', 'LIKE', "%{$request->search}%")
+                                ->orWhere('mobile', 'LIKE', "%{$request->search}%");
+                        });
+                });
+            }
+
+            if ($request->from_date) {
+                $query->whereDate('sale_date', '>=', $request->from_date);
+            }
+            if ($request->to_date) {
+                $query->whereDate('sale_date', '<=', $request->to_date);
+            }
+
+            $sales = $query->latest()->paginate(15)->withQueryString();
+
+            $stats = [
+                'total' => Sale::count(),
+                'paid' => Sale::where('payment_status', 'paid')->count(),
+                'partial' => Sale::where('payment_status', 'partial')->count(),
+                'unpaid' => Sale::where('payment_status', 'unpaid')->count(),
+                'emi' => Sale::where('payment_status', 'emi')->count(),
+                'shipping_required' => Sale::where('requires_shipping', true)->count(),
+                'shipped' => Sale::whereHas('shipments')->count(),
+                'total_returns' => \App\Models\CreditMemo::sum('refund_amount') ?? 0,
+                'total_revenue' => Sale::sum('grand_total') ?? 0,
+            ];
+
+            $customers = Customer::orderBy('name')->get();
+        } catch (\Throwable $e) {
+            Log::warning('Sales Index: Database offline. Returning empty results.');
+            $sales = new \Illuminate\Pagination\LengthAwarePaginator(collect(), 0, 15);
+            $stats = [
+                'total' => 0, 'paid' => 0, 'partial' => 0, 'unpaid' => 0, 
+                'emi' => 0, 'shipping_required' => 0, 'shipped' => 0,
+                'total_returns' => 0,
+                'total_revenue' => 0
+            ];
+            $customers = collect();
         }
-
-        if ($request->has('requires_shipping') && $request->requires_shipping !== '') {
-            $query->where('requires_shipping', $request->requires_shipping);
-        }
-
-        if ($request->search) {
-            $query->where(function ($q) use ($request) {
-                $q->where('invoice_no', 'LIKE', "%{$request->search}%")
-                    ->orWhereHas('customer', function ($cq) use ($request) {
-                        $cq->where('name', 'LIKE', "%{$request->search}%")
-                            ->orWhere('mobile', 'LIKE', "%{$request->search}%");
-                    });
-            });
-        }
-
-        if ($request->from_date) {
-            $query->whereDate('sale_date', '>=', $request->from_date);
-        }
-        if ($request->to_date) {
-            $query->whereDate('sale_date', '<=', $request->to_date);
-        }
-
-        $sales = $query->latest()->paginate(15)->withQueryString();
-
-        $stats = [
-            'total' => Sale::count(),
-            'paid' => Sale::where('payment_status', 'paid')->count(),
-            'partial' => Sale::where('payment_status', 'partial')->count(),
-            'unpaid' => Sale::where('payment_status', 'unpaid')->count(),
-            'emi' => Sale::where('payment_status', 'emi')->count(),
-            'shipping_required' => Sale::where('requires_shipping', true)->count(),
-            'shipped' => Sale::whereHas('shipments')->count()
-        ];
-
-        $customers = Customer::orderBy('name')->get();
 
         return view('sales.index', compact('sales', 'stats', 'request', 'customers'));
     }
 
     public function create()
     {
-        $customers = Customer::orderBy('name')->get();
-        $products  = Product::where('quantity', '>', 0)->orderBy('name')->get();
+        try {
+            $customers = Customer::orderBy('name')->get();
+            $products  = Product::where('quantity', '>', 0)->orderBy('name')->get();
+        } catch (\Throwable $e) {
+            $customers = collect();
+            $products = collect();
+        }
         $invoice_token = uniqid() . '_' . time();
 
         return view('sales.create', compact('customers', 'products', 'invoice_token'));
@@ -832,8 +885,61 @@ private function createShipmentFromSale($sale, $request)
         return $subTotal;
     }
 
-    public function show(Sale $sale)
+    public function show($id)
     {
+        try {
+            // Try finding by primary ID or invoice_token
+            $sale = Sale::where('id', $id)
+                ->orWhere('invoice_token', $id)
+                ->with([
+                    'customer',
+                    'items.product',
+                    'payments',
+                    'shipments' => function ($q) {
+                        $q->with(['trackings' => function ($tq) {
+                            $tq->latest()->limit(1);
+                        }]);
+                    }
+                ])
+                ->first();
+        } catch (\Throwable $e) {
+            $sale = null;
+        }
+
+        if (!$sale) {
+            // If not in DB, it might be an offline invoice
+            // We create a dummy sale object to prevent Blade from crashing,
+            // while providing the local_token for JS to override data.
+            $dummySale = new Sale([
+                'invoice_no' => 'OFFLINE-' . substr($id, 0, 8),
+                'invoice_token' => $id,
+                'payment_status' => 'unpaid',
+                'grand_total' => 0,
+                'sub_total' => 0,
+                'tax' => 0,
+                'tax_amount' => 0,
+                'discount' => 0,
+                'sale_date' => now(),
+                'created_at' => now(),
+            ]);
+            $dummySale->created_at = now();
+            // Set dummy relations
+            $dummySale->setRelation('customer', new \App\Models\Customer(['name' => 'Offline Customer']));
+            $dummySale->setRelation('items', collect());
+            $dummySale->setRelation('payments', collect());
+            $dummySale->setRelation('shipments', collect());
+            $dummySale->setRelation('creditMemos', collect());
+            $dummySale->setRelation('emiPlan', null);
+
+            return view('sales.show', [
+                'sale' => $dummySale, 
+                'local_token' => $id,
+                'emiData' => null,
+                'paymentSummary' => null,
+                'shipmentStatus' => ['exists' => false]
+            ]);
+        }
+
         $sale->load([
             'customer',
             'items.product',
@@ -1495,5 +1601,88 @@ private function createShipmentFromSale($sale, $request)
             'payment_count' => $payments->count(),
             'due' => $sale->grand_total - $payments->where('status', 'paid')->whereIn('remarks', ['INVOICE', 'EMI_DOWN', 'ADVANCE_USED'])->sum('amount')
         ];
+    }
+
+    /**
+     * Sync offline invoice to database
+     */
+    public function syncInvoice(Request $request)
+    {
+        try {
+            $data = $request->all();
+            
+            // 1. Check if already exists to prevent duplicates
+            $exists = Sale::where('invoice_token', $data['invoice_token'])->first();
+            if ($exists) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Already synced',
+                    'sale_id' => $exists->id
+                ]);
+            }
+
+            return DB::transaction(function () use ($data) {
+                // 2. Create Sale
+                $sale = Sale::create([
+                    'invoice_no' => $this->generateInvoiceNo(),
+                    'invoice_token' => $data['invoice_token'],
+                    'customer_id' => $data['customer']['id'] ?? null,
+                    'sub_total' => $data['totals']['subtotal'] ?? 0,
+                    'tax' => $data['totals']['tax_percent'] ?? 0,
+                    'tax_amount' => $data['totals']['tax_amount'] ?? 0,
+                    'discount' => $data['totals']['discount'] ?? 0,
+                    'grand_total' => $data['totals']['grand_total'] ?? 0,
+                    'payment_status' => 'unpaid', // Default to unpaid until payment is added
+                    'sale_date' => now(),
+                ]);
+
+                // 3. Create Sale Items & Update Stock
+                if (isset($data['items']) && is_array($data['items'])) {
+                    foreach ($data['items'] as $itemData) {
+                        $product = \App\Models\Product::find($itemData['product_id']);
+                        
+                        $sale->items()->create([
+                            'product_id' => $itemData['product_id'],
+                            'quantity' => $itemData['quantity'],
+                            'price' => $itemData['price'],
+                            'mrp' => $product ? $product->mrp : $itemData['price'],
+                            'total' => $itemData['quantity'] * $itemData['price'],
+                        ]);
+
+                        // Update stock
+                        if ($product) {
+                            $product->decrement('quantity', $itemData['quantity']);
+                        }
+                    }
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Invoice synced successfully',
+                    'sale_id' => $sale->id
+                ]);
+            });
+
+        } catch (\Throwable $e) {
+            Log::error('Sync failed: ' . $e->getMessage());
+            
+            $isDbError = str_contains($e->getMessage(), 'Connection refused') || 
+                         str_contains($e->getMessage(), 'SQLSTATE[HY000]') || 
+                         str_contains($e->getMessage(), '2002');
+
+            return response()->json([
+                'success' => false,
+                'error_type' => $isDbError ? 'DATABASE_ERROR' : 'GENERAL_ERROR',
+                'message' => 'Sync failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function generateInvoiceNo(): string
+    {
+        $prefix = 'INV';
+        $lastSale = Sale::orderBy('id', 'desc')->first();
+        $number = $lastSale ? ($lastSale->id + 1) : 1;
+        return $prefix . '-' . str_pad($number, 6, '0', STR_PAD_LEFT);
     }
 }
