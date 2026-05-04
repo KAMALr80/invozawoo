@@ -1,7 +1,7 @@
 {{-- resources/views/logistics/service-areas.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Service Areas & Coverage Map')
+@section('page-title', 'Service Areas & Coverage Map')
 
 @section('content')
     <style>

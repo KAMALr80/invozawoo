@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Active Agents')
+@section('page-title', 'Active Agents')
 
 @section('content')
     <style>

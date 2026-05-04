@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\GeocodingController;
 use App\Http\Controllers\Api\AgentLocationController;
 use App\Http\Controllers\Api\ConfigController;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Customers\CustomerController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -23,7 +25,7 @@ use Illuminate\Support\Facades\DB;
 */
 
 // OFFLINE POS SYNC API (Moved to web.php for better session handling)
-
+ Route::get('/get-customer', [CustomerController::class, 'getCustomer']);
 // ============================================================
 // TEST ROUTE - Check if API is working
 // ============================================================

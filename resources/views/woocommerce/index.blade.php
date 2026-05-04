@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page-title', 'WooCommerce Integration')
+
 @section('content')
 <style>
     /* Modern CSS Reset & Variables */
@@ -400,24 +402,7 @@
 </style>
 
 <div class="dashboard-container">
-    <!-- Top Navigation -->
-    <div class="top-nav">
-        <div class="logo-area">
-            <div class="logo-icon">
-                <i class="fab fa-wordpress"></i>
-            </div>
-            <div class="logo-text">
-                <h2>WooCommerce Integration Hub</h2>
-                <p>Enterprise Sync Platform</p>
-            </div>
-        </div>
-        <div class="status-indicator">
-            <div class="status-dot online"></div>
-            <span style="font-size: 14px; font-weight: 500;">System Online</span>
-            <div style="width: 1px; height: 30px; background: var(--gray-200);"></div>
-            <i class="fas fa-user-circle" style="font-size: 24px; color: var(--gray-600);"></i>
-        </div>
-    </div>
+
 
     <!-- Stats Grid -->
     <div class="stats-grid">

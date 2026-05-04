@@ -1012,28 +1012,7 @@
             <div class="spinner"></div>
         </div>
 
-        <!-- Header -->
-        <div class="erp-header">
-            <div class="header-brand">
-                <div class="brand-icon">👥</div>
-                <div class="brand-title">
-                    <h1>Customer Management</h1>
-                    <p>Manage customer profiles, wallet balances & transactions</p>
-                </div>
-            </div>
-            <div class="header-actions">
-                @if(auth()->user()->hasPermission('view_reports'))
-                    <a href="{{ route('wallet.report') }}" class="btn btn-secondary">
-                        <span>📊</span> Wallet Report
-                    </a>
-                @endif
-                @if(auth()->user()->hasPermission('create_customers'))
-                    <a href="{{ route('customers.create') }}" class="btn btn-primary">
-                        <span>+</span> Add Customer
-                    </a>
-                @endif
-            </div>
-        </div>
+
 
         <!-- Stats Cards -->
         @php

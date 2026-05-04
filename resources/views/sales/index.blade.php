@@ -1229,53 +1229,7 @@
             <!-- Toast Notification -->
             <div id="toastNotification" class="toast-notification"></div>
 
-            <!-- Header -->
-            <div class="dashboard-header">
-                <div class="header-left">
-                    <div class="header-icon">
-                        <span>💼</span>
-                    </div>
-                    <div class="header-content">
-                        <h1>Sales Ledger</h1>
-                        <p>Real-time oversight of enterprise sales performance</p>
-                    </div>
-                </div>
-                <div class="action-buttons">
-                    @if(auth()->user()->hasPermission('create_sales'))
-                        <a href="{{ route('sales.create') }}" class="btn-primary">
-                            <span style="font-size: 20px;">+</span>
-                            New Sale
-                        </a>
-                    @endif
-                    @if(auth()->user()->hasPermission('export_sales'))
-                        <div class="export-menu">
-                            <button class="btn-secondary" id="exportBtn">
-                                <span>📤</span>
-                                Export
-                                <span>▼</span>
-                            </button>
-                            <div class="export-dropdown" id="exportDropdown">
-                                <div class="export-option" data-format="csv">
-                                    <span>📁</span>
-                                    Export as CSV
-                                </div>
-                                <div class="export-option" data-format="excel">
-                                    <span>📊</span>
-                                    Export as Excel
-                                </div>
-                                <div class="export-option" data-format="pdf">
-                                    <span>📄</span>
-                                    Export as PDF
-                                </div>
-                                <div class="export-option" onclick="window.print()">
-                                    <span>🖨️</span>
-                                    Print List
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            </div>
+
 
             <!-- Stats Cards -->
             <div class="stats-grid">
@@ -1661,6 +1615,7 @@
     </div>
 </div>
 
+<script src="{{ asset('js/pos-data-service.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -2292,5 +2247,4 @@
         updateBulkActions();
     });
 </script>
-<script src="{{ asset('js/pos-data-service.js') }}"></script>
 @endsection

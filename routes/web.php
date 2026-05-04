@@ -193,7 +193,6 @@ Route::post('/sales/bulk-send-invoice', [SalesController::class, 'bulkSendInvoic
 Route::post('/sales/send-due-reminder', [SalesController::class, 'sendDueReminder'])->name('sales.send-due-reminder');
 Route::post('/sales/bulk-send-due-reminders', [SalesController::class, 'bulkSendDueReminders'])->name('sales.bulk-send-due-reminders');
 Route::post('/sync-invoice', [SalesController::class, 'syncInvoice'])->name('sales.sync');
-Route::get('/pos/sync-data', [SalesController::class, 'getSyncData'])->name('sales.sync-data');
 
 /*
 |--------------------------------------------------------------------------

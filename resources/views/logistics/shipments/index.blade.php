@@ -1,7 +1,7 @@
 {{-- resources/views/logistics/shipments/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Shipments Management')
+@section('page-title', 'Shipments Management')
 
 @section('content')
     <style>

@@ -1,7 +1,7 @@
 {{-- resources/views/logistics/shipments/edit.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Edit Shipment #' . $shipment->shipment_number)
+@section('page-title', 'Edit Shipment #' . $shipment->shipment_number)
 
 @section('content')
     <style>

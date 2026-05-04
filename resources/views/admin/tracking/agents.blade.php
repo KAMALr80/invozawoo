@@ -1,7 +1,7 @@
 {{-- resources/views/admin/tracking/agents.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Live Agent Tracking')
+@section('page-title', 'Live Agent Tracking')
 
 @section('content')
     <style>

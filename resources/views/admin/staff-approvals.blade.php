@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Staff Approval')
+@section('page-title', 'Staff Approval')
 
 @section('content')
     <style>

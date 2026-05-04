@@ -1,7 +1,7 @@
 {{-- resources/views/logistics/shipments/create.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Create New Shipment')
+@section('page-title', 'Create New Shipment')
 
 @section('content')
     <style>

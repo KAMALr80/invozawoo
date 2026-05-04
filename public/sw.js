@@ -1,23 +1,21 @@
-const CACHE_NAME = 'invoza-pos-v1';
+const CACHE_NAME = 'invoza-v1';
 const ASSETS_TO_CACHE = [
-    '/',
-    '/sales/create',
+    '/dashboard',
     '/sales',
+    '/sales/create',
+    '/css/app.css',
+    '/js/app.js',
     '/js/pos-data-service.js',
-    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js',
-    'https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css',
-    'https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css',
-    'https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css'
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
 // Install Event
-self.addEventListener('install', event => {
+self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            console.log('SW: Pre-caching POS Shell');
+        caches.open(CACHE_NAME).then((cache) => {
+            console.log('SW: Caching App Shell');
             return cache.addAll(ASSETS_TO_CACHE);
         })
     );
@@ -25,11 +23,16 @@ self.addEventListener('install', event => {
 });
 
 // Activate Event
-self.addEventListener('activate', event => {
+self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then(keys => {
+        caches.keys().then((cacheNames) => {
             return Promise.all(
-                keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+                cacheNames.map((cache) => {
+                    if (cache !== CACHE_NAME) {
+                        console.log('SW: Clearing Old Cache');
+                        return caches.delete(cache);
+                    }
+                })
             );
         })
     );
@@ -37,45 +40,65 @@ self.addEventListener('activate', event => {
 });
 
 // Fetch Event
-self.addEventListener('fetch', event => {
-    // Skip non-GET requests
+self.addEventListener('fetch', (event) => {
+    // Only cache GET requests
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
 
-    // Strategy: Network First, falling back to cache for the POS page
-    if (url.pathname === '/sales/create' || url.pathname.startsWith('/sales/')) {
+    // Navigation Requests: Network First, then Cache, then Fallback to Create Page
+    if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request)
-                .then(response => {
-                    const resClone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => {
-                        cache.put(event.request, resClone);
-                    });
-                    return response;
+                .catch(() => {
+                    return caches.match(event.request)
+                        .then(response => {
+                            if (response) return response;
+                            
+                            // If navigation to any /sales URL fails, fallback to either index or create
+                            if (url.pathname.startsWith('/sales')) {
+                                return caches.match('/sales');
+                            }
+                            return caches.match('/dashboard');
+                        })
+                        .then(response => response || Response.error());
                 })
-                .catch(() => caches.match(event.request))
         );
         return;
     }
 
-    // Strategy: Cache First for assets
+    // Static Assets & CDN: Cache First, then Network
     event.respondWith(
-        caches.match(event.request).then(cachedResponse => {
-            if (cachedResponse) return cachedResponse;
-
-            return fetch(event.request).then(response => {
-                // Don't cache if not a successful response
-                if (!response || response.status !== 200 || response.type !== 'basic') {
-                    return response;
+        caches.match(event.request).then((response) => {
+            if (response) return response;
+            
+            return fetch(event.request).then((fetchResponse) => {
+                // Cache static assets from our own domain or common CDNs
+                if (fetchResponse.ok && (
+                    url.origin === self.location.origin || 
+                    url.hostname.includes('cdnjs') || 
+                    url.hostname.includes('unpkg') ||
+                    url.hostname.includes('fonts.googleapis.com')
+                )) {
+                    const responseClone = fetchResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseClone);
+                    });
                 }
-
-                const resClone = response.clone();
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, resClone);
-                });
-                return response;
+                return fetchResponse;
             });
+        }).catch(() => {
+            // Silence errors for non-navigation requests
+            return new Response('Offline content unavailable', { status: 503, statusText: 'Service Unavailable' });
         })
     );
+});
+
+// Background Sync
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'sync-invoices') {
+        console.log('SW: Background Sync Triggered');
+        // This will be handled by the main thread usually via postMessage 
+        // or we can attempt to fetch here if we use IndexedDB
+    }
 });

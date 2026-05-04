@@ -1,7 +1,7 @@
 {{-- resources/views/logistics/shipments/show.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Shipment Details - ' . $shipment->shipment_number)
+@section('page-title', 'Shipment Details - ' . $shipment->shipment_number)
 
 @section('content')
     <style>

@@ -888,16 +888,10 @@ private function createShipmentFromSale($sale, $request)
     public function show($id)
     {
         try {
-            // First, try to find by invoice_token (exact match)
-            $sale = Sale::where('invoice_token', $id)->first();
-
-            // If not found by token and ID is numeric, try finding by primary ID
-            if (!$sale && is_numeric($id)) {
-                $sale = Sale::find($id);
-            }
-
-            if ($sale) {
-                $sale->load([
+            // Try finding by primary ID or invoice_token
+            $sale = Sale::where('id', $id)
+                ->orWhere('invoice_token', $id)
+                ->with([
                     'customer',
                     'items.product',
                     'payments',
@@ -906,8 +900,8 @@ private function createShipmentFromSale($sale, $request)
                             $tq->latest()->limit(1);
                         }]);
                     }
-                ]);
-            }
+                ])
+                ->first();
         } catch (\Throwable $e) {
             $sale = null;
         }
@@ -1690,50 +1684,5 @@ private function createShipmentFromSale($sale, $request)
         $lastSale = Sale::orderBy('id', 'desc')->first();
         $number = $lastSale ? ($lastSale->id + 1) : 1;
         return $prefix . '-' . str_pad($number, 6, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * Get products and customers for offline sync
-     */
-    public function getSyncData()
-    {
-        try {
-            $products = Product::where('quantity', '>', 0)
-                ->orderBy('name')
-                ->get()
-                ->map(function($p) {
-                    return [
-                        'id' => $p->id,
-                        'name' => $p->name,
-                        'price' => (float) ($p->sale_price ?? $p->price),
-                        'mrp' => (float) ($p->mrp ?? $p->price),
-                        'quantity' => (int) $p->quantity,
-                        'category' => $p->category->name ?? 'Uncategorized'
-                    ];
-                });
-
-            $customers = Customer::orderBy('name')
-                ->get()
-                ->map(function($c) {
-                    return [
-                        'id' => $c->id,
-                        'name' => $c->name,
-                        'mobile' => $c->mobile,
-                        'email' => $c->email,
-                        'address' => $c->address
-                    ];
-                });
-
-            return response()->json([
-                'success' => true,
-                'products' => $products,
-                'customers' => $customers
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch sync data: ' . $e->getMessage()
-            ], 500);
-        }
     }
 }

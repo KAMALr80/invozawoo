@@ -1,7 +1,7 @@
 {{-- resources/views/logistics/live-track.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Live Tracking - ' . $shipment->shipment_number)
+@section('page-title', 'Live Tracking - ' . $shipment->shipment_number)
 
 @section('content')
     <style>

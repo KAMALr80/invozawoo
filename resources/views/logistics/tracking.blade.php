@@ -1,7 +1,7 @@
 {{-- resources/views/logistics/tracking.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Track Shipment - ' . $shipment->shipment_number)
+@section('page-title', 'Track Shipment - ' . $shipment->shipment_number)
 
 @section('content')
     <style>

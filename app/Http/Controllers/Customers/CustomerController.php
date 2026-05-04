@@ -10,6 +10,10 @@ use App\Models\Sale;
 
 class CustomerController extends Controller
 {
+    public function getCustomer()
+    {
+        dd("kamal");
+    }
     /* ===============================
        CUSTOMER LIST (ADMIN PAGE)
     =============================== */
@@ -73,13 +77,32 @@ class CustomerController extends Controller
             'address' => 'nullable|string',
         ]);
 
-        Customer::create([
+        $customer = Customer::create([
             'name'    => trim($request->name),
             'mobile'  => trim($request->mobile),
             'email'   => trim($request->email),
             'gst_no'  => trim($request->gst_no),
             'address' => trim($request->address),
         ]);
+
+        if ($request->from === 'sales.create') {
+            return redirect()
+                ->route('sales.create', [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name
+                ])
+                ->with('success', 'Customer added and selected successfully');
+        }
+
+        if ($request->from === 'sales.edit' && $request->sale_id) {
+            return redirect()
+                ->route('sales.edit', [
+                    'sale' => $request->sale_id,
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name
+                ])
+                ->with('success', 'Customer added and selected successfully');
+        }
 
         return redirect()
             ->route('customers.index')

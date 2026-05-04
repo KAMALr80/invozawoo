@@ -1012,25 +1012,7 @@
 
 <div class="inventory-page">
     <div class="container">
-        <!-- Header Card -->
-        <div class="header-card">
-            <div class="header-content">
-                <div class="header-left">
-                    <div class="header-icon">📦</div>
-                    <div class="header-title">
-                        <h1>Inventory Management</h1>
-                        <p>Manage your products, track stock levels, and monitor inventory</p>
-                    </div>
-                </div>
 
-                @if (auth()->user()->hasPermission('create_inventory'))
-                    <a href="{{ route('inventory.create') }}" class="btn-add">
-                        <span style="font-size: 20px;">+</span>
-                        Add New Product
-                    </a>
-                @endif
-            </div>
-        </div>
 
         <!-- Stats Cards -->
         <div class="stats-grid">

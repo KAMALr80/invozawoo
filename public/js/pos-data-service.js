@@ -139,30 +139,37 @@ const DataService = (function() {
                 throw error;
             }
         },
-        
-        /**
-         * Download latest data from server
-         */
-        downloadData: async function() {
-            if (!navigator.onLine) {
-                throw new Error('OFFLINE');
-            }
 
-            try {
-                const response = await fetch('/pos/sync-data');
-                if (!response.ok) throw new Error('Failed to fetch data');
-                
-                const result = await response.json();
-                if (result.success) {
-                    this.bootstrap(result.products, result.customers);
-                    return result;
-                } else {
-                    throw new Error(result.message || 'Download failed');
+        /**
+         * Sync all unsynced invoices
+         */
+        syncAllPending: async function() {
+            if (!navigator.onLine) return;
+            
+            const invoices = this.getAllInvoices();
+            const pendingTokens = Object.keys(invoices).filter(token => !invoices[token].synced);
+            
+            if (pendingTokens.length === 0) return;
+            
+            console.log(`Sync: Attempting to sync ${pendingTokens.length} invoices`);
+            
+            for (const token of pendingTokens) {
+                try {
+                    await this.syncInvoice(token);
+                    console.log(`Sync: Success for ${token}`);
+                } catch (e) {
+                    console.error(`Sync: Failed for ${token}`, e);
+                    // Stop syncing if it's a DB error to prevent spamming
+                    if (e.message === 'DATABASE_ERROR') break;
                 }
-            } catch (error) {
-                console.error('Download Error:', error);
-                throw error;
             }
         }
     };
 })();
+
+// Auto-sync every 2 minutes if online
+setInterval(() => {
+    if (navigator.onLine && window.DataService) {
+        window.DataService.syncAllPending();
+    }
+}, 120000);

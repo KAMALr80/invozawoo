@@ -14,6 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3b82f6">
 
     <!-- DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
@@ -56,6 +57,27 @@
             --sidebar-width: 260px;
             --sidebar-collapsed-width: 0px;
             --header-height: 80px;
+        }
+
+        .status-badge-offline {
+            background: #fee2e2;
+            color: #ef4444;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 10px;
+            border: 1px solid #fecaca;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
         [data-theme="dark"] {
@@ -514,119 +536,6 @@
             text-align: center;
         }
 
-        /* ================= TOP NAVBAR ================= */
-        .top-navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: var(--header-height);
-            background: var(--bg-white);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 30px;
-            z-index: 998;
-            transition: left 0.3s ease;
-        }
-
-        /* Desktop - Navbar starts after sidebar */
-        @media (min-width: 992px) {
-            .top-navbar {
-                left: var(--sidebar-width);
-            }
-        }
-
-        /* Navbar left section */
-        .navbar-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        /* Menu Toggle Button (Mobile/Tablet only) */
-        .menu-toggle {
-            width: 44px;
-            height: 44px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            border: none;
-            border-radius: var(--radius-md);
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-
-        .menu-toggle:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-        }
-
-        @media (max-width: 991px) {
-            .menu-toggle {
-                display: flex;
-            }
-        }
-
-        .page-title {
-            font-size: clamp(18px, 3vw, 22px);
-            font-weight: 700;
-            color: var(--text-main);
-            word-break: break-word;
-        }
-
-        .user-section {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-detail {
-            text-align: right;
-        }
-
-        .user-fullname {
-            font-weight: 600;
-            color: var(--text-main);
-            font-size: 15px;
-            word-break: break-word;
-        }
-
-        .user-badge {
-            font-size: 13px;
-            color: var(--text-muted);
-            background: var(--bg-light);
-            padding: 3px 10px;
-            border-radius: 20px;
-            display: inline-block;
-            word-break: break-word;
-        }
-
-        .logout-btn {
-            background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: var(--radius-md);
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
-            white-space: nowrap;
-        }
-
-        .logout-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
-        }
 
         /* ================= MAIN CONTENT ================= */
         .main-content {
@@ -930,150 +839,6 @@
                 width: 100%;
                 margin-right: 0 !important;
             }
-        }
-        /* ================= PREMIUM PROFILE DROPDOWN ================= */
-        .profile-dropdown-container {
-            position: relative;
-            z-index: 1001;
-        }
-
-        .profile-trigger {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 4px 8px;
-            padding-right: 12px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid transparent;
-            background: rgba(0,0,0,0.02);
-        }
-
-        .profile-trigger:hover {
-            background: var(--bg-light);
-            border-color: var(--border);
-        }
-
-        .user-meta-header {
-            text-align: right;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .user-name-header {
-            font-weight: 700;
-            font-size: 14px;
-            color: var(--text-main);
-            line-height: 1.2;
-        }
-
-        .user-role-header {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .user-avatar-header {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            overflow: hidden;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 16px;
-            box-shadow: 0 4px 10px rgba(14, 165, 233, 0.2);
-        }
-
-        .user-avatar-header img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .top-nav-dropdown {
-            position: absolute;
-            top: calc(100% + 10px);
-            right: 0;
-            width: 220px;
-            background: var(--bg-white);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            padding: 8px;
-            display: none;
-            flex-direction: column;
-            animation: slideUp 0.3s ease forwards;
-        }
-
-        .top-nav-dropdown.active {
-            display: flex;
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .dropdown-header-premium {
-            padding: 10px 12px;
-            font-size: 11px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .top-nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: 8px;
-            text-decoration: none;
-            color: var(--text-main);
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-
-        .top-nav-item:hover {
-            background: var(--bg-light);
-            color: var(--primary);
-        }
-
-        .top-nav-item i {
-            width: 20px;
-            font-size: 16px;
-            color: var(--text-muted);
-        }
-
-        .top-nav-item:hover i {
-            color: var(--primary);
-        }
-
-        .dropdown-divider {
-            height: 1px;
-            background: var(--border);
-            margin: 8px 12px;
-        }
-
-        .logout-link:hover {
-            background: rgba(239, 68, 68, 0.05);
-            color: var(--danger);
-        }
-
-        .logout-link:hover i {
-            color: var(--danger);
-        }
-
-        @media (max-width: 767px) {
-            .user-meta-header { display: none; }
-            .top-nav-dropdown { width: 180px; }
         }
         /* ================= PREMIUM OMNI-SEARCH (COMMAND PALETTE) ================= */
         .omni-search-modal {
@@ -1525,7 +1290,9 @@
         </div>
     </div>
 
-    {{-- ================= MAIN SIDEBAR ================= --}}
+    {{-- Sidebar Overlay for Mobile --}}
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
     {{-- ================= MAIN SIDEBAR ================= --}}
     <div id="sidebar">
         {{-- Close Button (Mobile only) --}}
@@ -1836,111 +1603,7 @@
 
     <!-- Main Content Area -->
     <div id="main-area">
-        <header class="top-navbar">
-            <div class="navbar-left">
-                <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-                <h2 class="page-title">@yield('page-title', 'Dashboard')</h2>
-                
-                <div class="search-trigger-premium" onclick="openOmniSearch()" style="margin-left: 40px; width: 350px; background: var(--bg-light); padding: 10px 20px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--text-muted); transition: all 0.3s ease;">
-                    <i class="fas fa-search" style="font-size: 14px;"></i>
-                    <span style="font-size: 14px; font-weight: 500;">Search anything...</span>
-                    <span style="margin-left: auto; font-size: 10px; font-weight: 800; background: var(--bg-white); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">Ctrl + /</span>
-                </div>
-
-                {{-- Quick Create Action Buttons --}}
-                <div class="quick-create-actions" style="display: flex; align-items: center; gap: 10px; margin-left: 20px;">
-                    @if (auth()->user()->hasPermission('view_sales'))
-                        <a href="{{ route('sales.create') }}" class="btn-quick-create btn-qc-sales" style="display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%); color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); transition: all 0.3s;">
-                            <i class="fas fa-cash-register"></i> Create POS
-                        </a>
-                    @endif
-                    @if (auth()->user()->hasPermission('view_employees') || auth()->user()->hasPermission('edit_employees'))
-                        <a href="{{ route('employees.create') }}" class="btn-quick-create btn-qc-employee" style="display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); transition: all 0.3s;">
-                            <i class="fas fa-user-plus"></i> Add Employee
-                        </a>
-                    @endif
-                    @if (auth()->user()->hasPermission('view_customers'))
-                        <a href="{{ route('customers.create') }}" class="btn-quick-create btn-qc-customer" style="display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--secondary) 0%, #4f46e5 100%); color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3); transition: all 0.3s;">
-                            <i class="fas fa-address-book"></i> Add Customer
-                        </a>
-                    @endif
-                </div>
-            </div>
-
-            <div class="user-section" style="display: flex; align-items: center; gap: 20px;">
-                @if (auth()->user()->role === 'admin')
-                    @php
-                        $logisticsEnabled = \Illuminate\Support\Facades\Cache::get('logistics_system_enabled', true);
-                    @endphp
-                    <div id="logisticsSystemToggle" onclick="toggleLogisticsSystem()" style="display: flex; align-items: center; gap: 8px; background: {{ $logisticsEnabled ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}; padding: 6px 12px; border-radius: 30px; border: 1px solid {{ $logisticsEnabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)' }}; cursor: pointer; transition: all 0.3s ease;" title="Global Logistics System: {{ $logisticsEnabled ? 'ON' : 'OFF' }}">
-                        <i class="fas fa-truck-moving" style="color: {{ $logisticsEnabled ? '#10b981' : '#ef4444' }}; font-size: 14px;"></i>
-                        <span style="font-size: 11px; font-weight: 700; color: {{ $logisticsEnabled ? '#10b981' : '#ef4444' }};">Logistics: {{ $logisticsEnabled ? 'ON' : 'OFF' }}</span>
-                    </div>
-                @endif
-
-                <div id="networkStatus" style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; transition: all 0.3s ease;">
-                    <i class="fas fa-circle" style="font-size: 8px;"></i>
-                    <span id="networkText">Checking...</span>
-                </div>
-
-                <div id="themeToggle" onclick="toggleTheme()" style="display: flex; align-items: center; gap: 10px; background: var(--bg-light); padding: 6px; border-radius: 30px; border: 1px solid var(--border); cursor: pointer;">
-                   <div style="width: 34px; height: 34px; background: var(--bg-white); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); color: var(--text-muted); font-size: 11px; font-weight: 700;">Light</div>
-                   <div style="color: var(--text-muted); font-size: 14px; padding-right: 10px;"><i class="fas fa-moon"></i></div>
-                </div>
-
-                <div class="notification-dropdown-container">
-                    <div class="notification-trigger" onclick="toggleNotifications()">
-                        <i class="far fa-bell"></i>
-                        <span id="notificationBadge" class="notification-badge">0</span>
-                    </div>
-                    <div id="notificationDropdown" class="notification-dropdown">
-                        <div class="notification-header">
-                            <h4>Notifications</h4>
-                            <a href="#" class="mark-all-read-btn" onclick="markAllNotificationsAsRead(event)">Mark all as read</a>
-                        </div>
-                        <div id="notificationList" class="notification-list">
-                            <div class="no-notifications">Loading notifications...</div>
-                        </div>
-                        <div class="notification-footer">
-                            <a href="#">View All Activity</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="profile-dropdown-container">
-                    <div class="profile-trigger" onclick="toggleTopDropdown('userMenu')">
-                        <div class="user-meta-header">
-                            <div class="user-name-header">{{ auth()->user()->name }}</div>
-                            <div class="user-role-header">{{ ucfirst(auth()->user()->role) }}</div>
-                        </div>
-                        <div class="user-avatar-header">
-                            @if(auth()->user()->avatar)
-                                <img src="{{ auth()->user()->avatar }}" alt="avatar">
-                            @else
-                                {{ substr(auth()->user()->name, 0, 1) }}
-                            @endif
-                        </div>
-                        <i class="fas fa-chevron-down" style="font-size: 10px; color: var(--text-muted); margin-left: 5px;"></i>
-                    </div>
-
-                    <div id="userMenu" class="top-nav-dropdown">
-                        <div class="dropdown-header-premium">User Account</div>
-                        <a href="{{ route('profile.index') }}" class="top-nav-item">
-                            <i class="fas fa-user-circle"></i>
-                            <span>My Profile</span>
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="top-nav-item logout-link">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Log Out</span>
-                        </a>
-                        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                            @csrf
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </header>
+        @include('layouts.navigation')
 
         <main class="main-content">
             @yield('content')
@@ -2003,23 +1666,15 @@
         }
 
         function updateThemeToggleButton(theme) {
-            const toggle = document.getElementById('themeToggle');
-            if (!toggle) return;
-            const lightLabel = toggle.querySelector('div:first-child');
-            const icon = toggle.querySelector('i');
+            const darkIcon = document.querySelector('.dark-icon');
+            const lightIcon = document.querySelector('.light-icon');
             
             if (theme === 'dark') {
-                lightLabel.innerText = 'Dark';
-                lightLabel.style.color = '#fff';
-                lightLabel.parentElement.style.background = '#0f172a';
-                icon.className = 'fas fa-sun';
-                icon.parentElement.style.color = '#f59e0b';
+                if (darkIcon) darkIcon.style.display = 'none';
+                if (lightIcon) lightIcon.style.display = 'block';
             } else {
-                lightLabel.innerText = 'Light';
-                lightLabel.style.color = '#64748b';
-                lightLabel.parentElement.style.background = '#f1f5f9';
-                icon.className = 'fas fa-moon';
-                icon.parentElement.style.color = '#94a3b8';
+                if (darkIcon) darkIcon.style.display = 'block';
+                if (lightIcon) lightIcon.style.display = 'none';
             }
         }
 
@@ -2030,11 +1685,10 @@
 
         // Global Logistics Toggle Function
         async function toggleLogisticsSystem() {
-            const toggleBtn = document.getElementById('logisticsSystemToggle');
-            if (!toggleBtn) return;
+            const toggleIcon = document.querySelector('.fa-truck-moving');
+            if (!toggleIcon) return;
             
-            toggleBtn.style.opacity = '0.5';
-            toggleBtn.style.pointerEvents = 'none';
+            toggleIcon.style.opacity = '0.5';
 
             try {
                 const response = await fetch("{{ route('admin.logistics.toggle') }}", {
@@ -2473,35 +2127,33 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('SW: Registered', reg))
-                    .catch(err => console.error('SW: Failed', err));
+                    .then(reg => console.log('SW: Registered', reg.scope))
+                    .catch(err => console.log('SW: Failed', err));
             });
         }
 
-        // Network Status Logic
-        function updateNetworkStatus() {
-            const status = document.getElementById('networkStatus');
-            const text = document.getElementById('networkText');
-            if (!status || !text) return;
-
+        // Connectivity Status Handling
+        function updateOnlineStatus() {
+            const statusEl = document.getElementById('connectivity-status');
             if (navigator.onLine) {
-                status.style.background = 'rgba(16, 185, 129, 0.1)';
-                status.style.color = '#10b981';
-                status.style.border = '1px solid rgba(16, 185, 129, 0.2)';
-                text.textContent = 'ONLINE';
-                status.querySelector('i').style.color = '#10b981';
+                if (statusEl) {
+                    statusEl.style.display = 'none';
+                    // Trigger sync if online
+                    if (window.DataService && typeof window.DataService.syncAllPending === 'function') {
+                        window.DataService.syncAllPending();
+                    }
+                }
             } else {
-                status.style.background = 'rgba(239, 68, 68, 0.1)';
-                status.style.color = '#ef4444';
-                status.style.border = '1px solid rgba(239, 68, 68, 0.2)';
-                text.textContent = 'OFFLINE MODE';
-                status.querySelector('i').style.color = '#ef4444';
+                if (statusEl) {
+                    statusEl.style.display = 'inline-flex';
+                    statusEl.className = 'status-badge-offline';
+                }
             }
         }
 
-        window.addEventListener('online', updateNetworkStatus);
-        window.addEventListener('offline', updateNetworkStatus);
-        document.addEventListener('DOMContentLoaded', updateNetworkStatus);
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        document.addEventListener('DOMContentLoaded', updateOnlineStatus);
     </script>
 
     {{-- ================= PAGE SPECIFIC SCRIPTS ================= --}}

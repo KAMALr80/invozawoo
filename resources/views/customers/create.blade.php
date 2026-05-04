@@ -668,6 +668,12 @@
             <!-- Form -->
             <form method="POST" action="{{ route('customers.store') }}" id="customerForm">
                 @csrf
+                @if(request('from'))
+                    <input type="hidden" name="from" value="{{ request('from') }}">
+                @endif
+                @if(request('sale_id'))
+                    <input type="hidden" name="sale_id" value="{{ request('sale_id') }}">
+                @endif
 
                 <!-- Full Name -->
                 <div class="form-group">

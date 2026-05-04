@@ -1,7 +1,7 @@
 {{-- resources/views/logistics/route-planner.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Route Planner & Optimization')
+@section('page-title', 'Route Planner & Optimization')
 
 @section('content')
     <style>

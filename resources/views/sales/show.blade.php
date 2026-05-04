@@ -1582,11 +1582,6 @@
                             <div class="status-badge {{ $sale->payment_status }}">
                                 {{ strtoupper($sale->payment_status) }}
                             </div>
-                            @if(isset($local_token))
-                                <div class="status-badge" style="background: #f59e0b; color: white;">
-                                    ⚠️ OFFLINE DRAFT
-                                </div>
-                            @endif
                             <div class="header-actions">
                                 @if(isset($local_token))
                                     <button id="syncBtn" class="header-btn" onclick="handleSync()" title="Sync this invoice to server" style="background: #10b981; color: white;">
@@ -2217,11 +2212,6 @@
                                 Customer
                                 History</a>
                         @endif
-                        @if(isset($local_token))
-                            <button type="button" class="btn-primary-lg" onclick="handleSync()" style="background: #10b981; border: none; width: 100%; justify-content: center; margin-top: 1rem;">
-                                🔄 Sync this Invoice to Server Now
-                            </button>
-                        @endif
                     </div>
 
                     {{-- EMI Details --}}
@@ -2346,14 +2336,8 @@
 
                 // Update totals
                 if (localData.totals) {
-                    document.querySelector('.grand-total .amount').textContent = '₹' + localData.totals.grand_total.toLocaleString('en-IN', {minimumFractionDigits: 2});
-                    
-                    // Update Summary Box if it exists
-                    const subtotalEl = document.querySelector('.summary-row .summary-value');
-                    if (subtotalEl) subtotalEl.textContent = '₹' + (localData.totals.subtotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                    
-                    const taxEl = document.querySelectorAll('.summary-row .summary-value')[1];
-                    if (taxEl) taxEl.textContent = '₹' + (localData.totals.tax_amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                    document.querySelector('.grand-total .amount').textContent = '₹' + localData.totals.grand_total.toFixed(2);
+                    // Update other totals if needed
                 }
 
                 if (localData.synced) {

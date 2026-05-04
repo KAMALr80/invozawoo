@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'System Audit Logs')
+@section('page-title', 'System Audit Logs')
 
 @section('content')
 <style>

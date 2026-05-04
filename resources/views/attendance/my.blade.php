@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page-title', 'My Attendance')
+
 @section('content')
     <div style="background:#fff; padding:25px; border-radius:8px; width:100%;">
 

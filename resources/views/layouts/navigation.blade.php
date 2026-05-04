@@ -1,577 +1,454 @@
-<nav x-data="{ open: false }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50">
-    <style>
-        /* ================= PROFESSIONAL NAVIGATION STYLES ================= */
-        :root {
-            --nav-bg: #ffffff;
-            --nav-bg-dark: #1f2937;
-            --nav-border: #e5e7eb;
-            --nav-border-dark: #374151;
-            --nav-text: #374151;
-            --nav-text-dark: #e5e7eb;
-            --nav-hover: #f3f4f6;
-            --nav-hover-dark: #374151;
-            --nav-active: #3b82f6;
-            --nav-active-dark: #60a5fa;
-            --nav-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --radius-md: 8px;
-            --radius-lg: 12px;
-        }
+@php
+    $logisticsEnabled = \Illuminate\Support\Facades\Cache::get('logistics_system_enabled', true);
+@endphp
 
-        /* ================= ANIMATIONS ================= */
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+<style>
+    /* ================= PREMIUM NAVIGATION COMPONENT STYLES ================= */
+    .top-navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--header-height);
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(15px) saturate(180%);
+        -webkit-backdrop-filter: blur(15px) saturate(180%);
+        border-bottom: 1px solid rgba(241, 245, 249, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 clamp(15px, 3vw, 30px);
+        z-index: 998;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
+    [data-theme="dark"] .top-navbar {
+        background: rgba(30, 41, 59, 0.7);
+        border-bottom-color: rgba(51, 65, 85, 0.5);
+    }
 
-        /* ================= NAVIGATION STYLES ================= */
-        .nav-container {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 0 clamp(16px, 4vw, 32px);
+    @media (min-width: 992px) {
+        .top-navbar {
+            left: var(--sidebar-width);
         }
+    }
 
-        .nav-content {
+    .navbar-left {
+        display: flex;
+        align-items: center;
+        gap: clamp(10px, 2vw, 20px);
+    }
+
+    .menu-toggle {
+        width: 44px;
+        height: 44px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        border: none;
+        border-radius: var(--radius-md);
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    }
+
+    .menu-toggle:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4);
+    }
+
+    @media (max-width: 991px) {
+        .menu-toggle {
             display: flex;
-            justify-content: space-between;
-            height: 70px;
         }
+    }
 
-        /* Logo Section */
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
+    .page-title {
+        font-size: clamp(16px, 2.5vw, 22px);
+        font-weight: 800;
+        color: var(--text-main);
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
 
-        .logo-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
+    /* Connectivity Status */
+    .status-badge-offline {
+        background: #fee2e2;
+        color: #ef4444;
+        padding: 4px 12px;
+        border-radius: 30px;
+        font-size: 11px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid #fecaca;
+        animation: pulse-red 2s infinite;
+    }
 
-        .logo-wrapper:hover {
-            transform: scale(1.02);
-        }
+    @keyframes pulse-red {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+        70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
 
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
-        }
+    /* Premium Omni-Search Trigger */
+    .search-trigger-premium {
+        background: rgba(248, 250, 252, 0.8);
+        padding: 10px 20px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+        width: clamp(200px, 25vw, 400px);
+    }
 
-        .logo-text {
-            font-size: 20px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+    [data-theme="dark"] .search-trigger-premium {
+        background: rgba(15, 23, 42, 0.6);
+    }
 
-        /* Desktop Navigation Links */
-        .desktop-nav {
-            display: flex;
-            align-items: center;
-            margin-left: 40px;
-            gap: 8px;
-        }
+    .search-trigger-premium:hover {
+        background: var(--bg-white);
+        border-color: var(--primary);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-1px);
+    }
 
-        @media (max-width: 768px) {
-            .desktop-nav {
-                display: none;
-            }
-        }
+    .search-kbd {
+        margin-left: auto;
+        font-size: 10px;
+        font-weight: 800;
+        background: var(--bg-white);
+        padding: 2px 6px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+    }
 
-        .nav-link {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 16px;
-            border-radius: var(--radius-md);
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--nav-text);
-            text-decoration: none;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
+    /* Quick Actions */
+    .quick-create-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
 
-        .nav-link:hover {
-            background-color: var(--nav-hover);
-            transform: translateY(-1px);
-        }
+    @media (max-width: 1200px) {
+        .search-trigger-premium { width: auto; padding: 12px; }
+        .search-trigger-premium span { display: none; }
+        .search-kbd { display: none; }
+    }
 
-        .nav-link.active {
-            color: var(--nav-active);
-            font-weight: 600;
-            background-color: rgba(59, 130, 246, 0.1);
-        }
+    @media (max-width: 768px) {
+        .quick-create-actions { display: none; }
+    }
 
-        .dark .nav-link {
-            color: var(--nav-text-dark);
-        }
+    .btn-quick-create {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        color: white;
+    }
 
-        .dark .nav-link:hover {
-            background-color: var(--nav-hover-dark);
-        }
+    .btn-quick-create:hover {
+        transform: translateY(-3px) scale(1.02);
+        filter: brightness(1.1);
+    }
 
-        .dark .nav-link.active {
-            color: var(--nav-active-dark);
-            background-color: rgba(96, 165, 250, 0.15);
-        }
+    .btn-qc-sales { background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%); box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3); }
+    .btn-qc-employee { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); box-shadow: 0 6px 15px rgba(14, 165, 233, 0.3); }
 
-        /* Desktop Dropdown */
-        .desktop-dropdown {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+    /* Right Section */
+    .user-section {
+        display: flex;
+        align-items: center;
+        gap: clamp(10px, 1.5vw, 20px);
+    }
 
-        .user-menu-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--nav-text);
-            background-color: transparent;
-            border: 1px solid var(--nav-border);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+    .nav-icon-btn {
+        width: 42px;
+        height: 42px;
+        background: var(--bg-light);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        font-size: 18px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+        position: relative;
+    }
 
-        .user-menu-btn:hover {
-            background-color: var(--nav-hover);
-            border-color: var(--nav-active);
-        }
+    .nav-icon-btn:hover {
+        background: var(--bg-white);
+        color: var(--primary);
+        border-color: var(--border);
+        transform: translateY(-2px);
+    }
 
-        .dark .user-menu-btn {
-            color: var(--nav-text-dark);
-            border-color: var(--nav-border-dark);
-        }
+    /* Notification Badge */
+    .notification-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: var(--danger);
+        color: white;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 2px 6px;
+        border-radius: 20px;
+        border: 2px solid var(--bg-white);
+        min-width: 20px;
+        height: 20px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3);
+    }
 
-        .dark .user-menu-btn:hover {
-            background-color: var(--nav-hover-dark);
-            border-color: var(--nav-active-dark);
-        }
+    .notification-badge.active { display: flex; }
 
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-        }
+    /* Profile Trigger */
+    .profile-trigger {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 5px 10px;
+        background: rgba(14, 165, 233, 0.05);
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
 
-        /* Dropdown Menu */
-        .dropdown-menu {
-            position: absolute;
-            right: 0;
-            top: calc(100% + 8px);
-            min-width: 240px;
-            background: white;
-            border-radius: var(--radius-lg);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border: 1px solid var(--nav-border);
-            overflow: hidden;
-            animation: slideDown 0.2s ease;
-            z-index: 1000;
-        }
+    .profile-trigger:hover {
+        background: rgba(14, 165, 233, 0.1);
+        border-color: rgba(14, 165, 233, 0.2);
+        transform: translateY(-1px);
+    }
 
-        .dark .dropdown-menu {
-            background: var(--nav-bg-dark);
-            border-color: var(--nav-border-dark);
-        }
+    .user-meta-header {
+        text-align: right;
+    }
 
-        .dropdown-item {
-            display: block;
-            padding: 12px 16px;
-            color: var(--nav-text);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            border-bottom: 1px solid var(--nav-border);
-        }
+    .user-name-header {
+        font-weight: 800;
+        font-size: 14px;
+        color: var(--text-main);
+        line-height: 1.1;
+    }
 
-        .dropdown-item:last-child {
-            border-bottom: none;
-        }
+    .user-role-header {
+        font-size: 11px;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
 
-        .dropdown-item:hover {
-            background-color: var(--nav-hover);
-            padding-left: 20px;
-        }
+    .user-avatar-header {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: var(--primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 16px;
+        box-shadow: 0 4px 10px rgba(14, 165, 233, 0.2);
+        overflow: hidden;
+    }
 
-        .dark .dropdown-item {
-            color: var(--nav-text-dark);
-            border-color: var(--nav-border-dark);
-        }
+    .user-avatar-header img { width: 100%; height: 100%; object-fit: cover; }
 
-        .dark .dropdown-item:hover {
-            background-color: var(--nav-hover-dark);
-        }
+    /* Dropdowns */
+    .top-nav-dropdown {
+        position: absolute;
+        top: calc(100% + 12px);
+        right: 0;
+        width: 260px;
+        background: var(--bg-white);
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        border: 1px solid var(--border);
+        padding: 10px;
+        display: none;
+        flex-direction: column;
+        z-index: 1000;
+        animation: dropdownIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
 
-        .dropdown-item.logout {
-            color: #ef4444;
-        }
+    @keyframes dropdownIn {
+        from { opacity: 0; transform: translateY(15px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
 
-        .dropdown-item.logout:hover {
-            background-color: #fee2e2;
-        }
+    .top-nav-dropdown.active { display: flex; }
 
-        .dark .dropdown-item.logout {
-            color: #f87171;
-        }
+    .dropdown-header-premium {
+        padding: 12px 15px;
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 8px;
+    }
 
-        .dark .dropdown-item.logout:hover {
-            background-color: rgba(239, 68, 68, 0.2);
-        }
+    .top-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 15px;
+        border-radius: 10px;
+        color: var(--text-main);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
 
-        /* Hamburger Menu */
-        .hamburger-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 44px;
-            height: 44px;
-            border-radius: var(--radius-md);
-            color: var(--nav-text);
-            background: transparent;
-            border: 1px solid var(--nav-border);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+    .top-nav-item:hover {
+        background: var(--bg-light);
+        color: var(--primary);
+        transform: translateX(5px);
+    }
 
-        .hamburger-btn:hover {
-            background-color: var(--nav-hover);
-            border-color: var(--nav-active);
-        }
+    .top-nav-item i { width: 20px; font-size: 16px; color: var(--text-muted); text-align: center; }
+    .top-nav-item:hover i { color: var(--primary); }
 
-        .dark .hamburger-btn {
-            color: var(--nav-text-dark);
-            border-color: var(--nav-border-dark);
-        }
+    .logout-item:hover { background: #fff1f2; color: var(--danger); }
+    .logout-item:hover i { color: var(--danger); }
 
-        .dark .hamburger-btn:hover {
-            background-color: var(--nav-hover-dark);
-            border-color: var(--nav-active-dark);
-        }
+    /* Mobile Adaptations */
+    @media (max-width: 600px) {
+        .page-title span:not(.status-badge-offline) { display: none; }
+        .user-meta-header { display: none; }
+        .search-trigger-premium { padding: 10px; }
+    }
+</style>
 
-        /* Responsive Menu */
-        .responsive-menu {
-            padding: 16px 0;
-            border-top: 1px solid var(--nav-border);
-            animation: slideDown 0.3s ease;
-        }
-
-        .dark .responsive-menu {
-            border-color: var(--nav-border-dark);
-        }
-
-        .responsive-nav {
-            display: flex;
-            flex-direction: column;
-            padding: 8px 16px;
-            gap: 4px;
-        }
-
-        .responsive-link {
-            display: block;
-            padding: 12px 16px;
-            border-radius: var(--radius-md);
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--nav-text);
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-
-        .responsive-link:hover {
-            background-color: var(--nav-hover);
-            transform: translateX(4px);
-        }
-
-        .responsive-link.active {
-            color: var(--nav-active);
-            background-color: rgba(59, 130, 246, 0.1);
-            font-weight: 600;
-        }
-
-        .dark .responsive-link {
-            color: var(--nav-text-dark);
-        }
-
-        .dark .responsive-link:hover {
-            background-color: var(--nav-hover-dark);
-        }
-
-        .dark .responsive-link.active {
-            color: var(--nav-active-dark);
-            background-color: rgba(96, 165, 250, 0.15);
-        }
-
-        /* User Info in Responsive Menu */
-        .responsive-user {
-            padding: 16px;
-            border-bottom: 1px solid var(--nav-border);
-            margin-bottom: 8px;
-        }
-
-        .dark .responsive-user {
-            border-color: var(--nav-border-dark);
-        }
-
-        .responsive-user-name {
-            font-weight: 600;
-            font-size: 16px;
-            color: var(--nav-text);
-            margin-bottom: 4px;
-        }
-
-        .dark .responsive-user-name {
-            color: var(--nav-text-dark);
-        }
-
-        .responsive-user-email {
-            font-size: 13px;
-            color: #6b7280;
-        }
-
-        .dark .responsive-user-email {
-            color: #9ca3af;
-        }
-
-        /* ================= RESPONSIVE BREAKPOINTS ================= */
+<header class="top-navbar">
+    <div class="navbar-left">
+        <button class="menu-toggle" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
         
-        /* Mobile Landscape (576px to 767px) */
-        @media (max-width: 767px) {
-            .logo-text {
-                display: none;
-            }
+        <div class="page-title">
+            <span>@php $navTitle = trim($__env->yieldContent('page-title')); @endphp {{ $navTitle ?: 'Dashboard' }}</span>
+            <span id="connectivity-status" class="status-badge-offline" style="display: none;">
+                <i class="fas fa-wifi-slash"></i> Offline
+            </span>
+        </div>
+        
+        <div class="search-trigger-premium" onclick="openOmniSearch()">
+            <i class="fas fa-search"></i>
+            <span>Search anything...</span>
+            <div class="search-kbd">Ctrl + K</div>
+        </div>
 
-            .logo-icon {
-                width: 35px;
-                height: 35px;
-                font-size: 18px;
-            }
-        }
-
-        /* Mobile Portrait (up to 575px) */
-        @media (max-width: 575px) {
-            .nav-content {
-                height: 60px;
-            }
-
-            .logo-icon {
-                width: 32px;
-                height: 32px;
-                font-size: 16px;
-            }
-
-            .hamburger-btn {
-                width: 40px;
-                height: 40px;
-            }
-        }
-
-        /* Extra Small Devices (up to 360px) */
-        @media (max-width: 360px) {
-            .nav-container {
-                padding: 0 12px;
-            }
-
-            .logo-icon {
-                width: 28px;
-                height: 28px;
-                font-size: 14px;
-            }
-
-            .hamburger-btn {
-                width: 36px;
-                height: 36px;
-            }
-        }
-    </style>
-
-    <!-- Primary Navigation Menu -->
-    <div class="nav-container">
-        <div class="nav-content">
-            <div class="logo-section">
-                <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}" class="logo-wrapper">
-                        <div class="logo-icon">⚡</div>
-                        <span class="logo-text">{{ config('app.name', 'INVOZA') }}</span>
-                    </a>
-                </div>
-
-                <!-- Navigation Links (Desktop) -->
-                <div class="desktop-nav">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" class="nav-link">
-                        <span>📊</span>
-                        <span style="margin-left: 8px;">{{ __('Dashboard') }}</span>
-                    </x-nav-link>
-                    <x-nav-link :href="route('woocommerce.index')" :active="request()->routeIs('woocommerce.*')" class="nav-link">
-                        <span>🔌</span>
-                        <span style="margin-left: 8px;">{{ __('WooCommerce') }}</span>
-                    </x-nav-link>
-                </div>
-            </div>
-
-            <!-- Settings Dropdown (Desktop) -->
-            <div class="desktop-dropdown">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button class="user-menu-btn">
-                            <div class="user-avatar">
-                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                            </div>
-                            <div>{{ auth()->user()->name }}</div>
-                            <div style="margin-left: 4px;">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <div class="dropdown-menu">
-                            <a href="{{ route('profile.edit') }}" class="dropdown-item">
-                                <span style="display: flex; align-items: center; gap: 8px;">
-                                    <span>👤</span>
-                                    {{ __('Profile') }}
-                                </span>
-                            </a>
-
-                            <!-- Authentication -->
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" class="dropdown-item logout" style="width: 100%; text-align: left;">
-                                    <span style="display: flex; align-items: center; gap: 8px;">
-                                        <span>🚪</span>
-                                        {{ __('Log Out') }}
-                                    </span>
-                                </button>
-                            </form>
-                        </div>
-                    </x-slot>
-                </x-dropdown>
-            </div>
-
-            <!-- Hamburger (Mobile) -->
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="hamburger-btn">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
+        <div class="quick-create-actions">
+            @if (auth()->user()->hasPermission('view_sales'))
+                <a href="{{ route('sales.create') }}" class="btn-quick-create btn-qc-sales">
+                    <i class="fas fa-cash-register"></i> <span>POS</span>
+                </a>
+            @endif
+            @if (auth()->user()->hasPermission('view_customers'))
+                <a href="{{ route('customers.create') }}" class="btn-quick-create btn-qc-employee" style="background: linear-gradient(135deg, var(--secondary) 0%, #4f46e5 100%);">
+                    <i class="fas fa-user-plus"></i> <span>Customer</span>
+                </a>
+            @endif
         </div>
     </div>
 
-    <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden responsive-menu">
-        <div class="responsive-user">
-            <div class="responsive-user-name">{{ auth()->user()->name }}</div>
-            <div class="responsive-user-email">{{ auth()->user()->email }}</div>
+    <div class="user-section">
+        @if (auth()->user()->role === 'admin')
+            <div class="nav-icon-btn" onclick="toggleLogisticsSystem()" title="Logistics System">
+                <i class="fas fa-truck-moving" style="color: {{ $logisticsEnabled ? 'var(--success)' : 'var(--danger)' }}"></i>
+            </div>
+        @endif
+
+        <div class="nav-icon-btn" onclick="toggleTheme()" title="Switch Theme">
+            <i class="fas fa-moon dark-icon"></i>
+            <i class="fas fa-sun light-icon" style="display: none;"></i>
         </div>
 
-        <div class="responsive-nav">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" class="responsive-link">
-                <span style="display: flex; align-items: center; gap: 8px;">
-                    <span>📊</span>
-                    {{ __('Dashboard') }}
-                </span>
-            </x-responsive-nav-link>
+        <div class="notification-dropdown-container" style="position: relative;">
+            <div class="nav-icon-btn" onclick="toggleNotifications()">
+                <i class="far fa-bell"></i>
+                <span id="notificationBadge" class="notification-badge">0</span>
+            </div>
+            
+            <div id="notificationDropdown" class="top-nav-dropdown" style="width: 350px;">
+                <div class="dropdown-header-premium d-flex justify-between align-center">
+                    <span>Notifications</span>
+                    <a href="#" onclick="markAllNotificationsAsRead(event)" style="color: var(--primary); font-size: 10px;">Mark read</a>
+                </div>
+                <div id="notificationList" style="max-height: 400px; overflow-y: auto;">
+                    <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                        Loading notifications...
+                    </div>
+                </div>
+                <div style="padding: 10px; border-top: 1px solid var(--border); text-align: center;">
+                    <a href="#" style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-decoration: none;">View All Activity</a>
+                </div>
+            </div>
+        </div>
 
-            <x-responsive-nav-link :href="route('woocommerce.index')" :active="request()->routeIs('woocommerce.*')" class="responsive-link">
-                <span style="display: flex; align-items: center; gap: 8px;">
-                    <span>🔌</span>
-                    {{ __('WooCommerce') }}
-                </span>
-            </x-responsive-nav-link>
+        <div class="profile-dropdown-container" style="position: relative;">
+            <div class="profile-trigger" onclick="toggleTopDropdown('userMenu')">
+                <div class="user-meta-header">
+                    <div class="user-name-header">{{ auth()->user()->name }}</div>
+                    <div class="user-role-header">{{ auth()->user()->role }}</div>
+                </div>
+                <div class="user-avatar-header">
+                    @if(auth()->user()->avatar)
+                        <img src="{{ auth()->user()->avatar }}" alt="avatar">
+                    @else
+                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                    @endif
+                </div>
+                <i class="fas fa-chevron-down" style="font-size: 10px; color: var(--text-muted);"></i>
+            </div>
 
-            <x-responsive-nav-link :href="route('profile.edit')" class="responsive-link">
-                <span style="display: flex; align-items: center; gap: 8px;">
-                    <span>👤</span>
-                    {{ __('Profile') }}
-                </span>
-            </x-responsive-nav-link>
-
-            <!-- Authentication -->
-            <form method="POST" action="{{ route('logout') }}" style="margin: 0;">
-                @csrf
-                <button type="submit" class="responsive-link" style="width: 100%; text-align: left; color: #ef4444;">
-                    <span style="display: flex; align-items: center; gap: 8px;">
-                        <span>🚪</span>
-                        {{ __('Log Out') }}
-                    </span>
-                </button>
-            </form>
+            <div id="userMenu" class="top-nav-dropdown">
+                <div class="dropdown-header-premium">Account Settings</div>
+                <a href="{{ route('profile.index') }}" class="top-nav-item">
+                    <i class="fas fa-user-circle"></i>
+                    <span>My Profile</span>
+                </a>
+                <a href="{{ route('dashboard') }}" class="top-nav-item">
+                    <i class="fas fa-th-large"></i>
+                    <span>Dashboard</span>
+                </a>
+                <div style="height: 1px; background: var(--border); margin: 8px 12px;"></div>
+                <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                    @csrf
+                </form>
+                <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="top-nav-item logout-item">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sign Out</span>
+                </a>
+            </div>
         </div>
     </div>
-
-    <script>
-        // Close responsive menu when clicking outside
-        document.addEventListener('click', function(event) {
-            const nav = document.querySelector('nav[x-data]');
-            const menu = document.querySelector('.responsive-menu');
-            const hamburger = document.querySelector('.hamburger-btn');
-
-            if (window.innerWidth <= 768 && 
-                nav && 
-                menu && 
-                hamburger && 
-                !nav.contains(event.target) && 
-                !hamburger.contains(event.target)) {
-                if (typeof Alpine !== 'undefined') {
-                    Alpine.store('nav', { open: false });
-                }
-            }
-        });
-
-        // Close menu on window resize
-        let resizeTimeout;
-        window.addEventListener('resize', function() {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(function() {
-                if (window.innerWidth > 768 && typeof Alpine !== 'undefined') {
-                    Alpine.store('nav', { open: false });
-                }
-            }, 250);
-        });
-    </script>
-</nav>
+</header>

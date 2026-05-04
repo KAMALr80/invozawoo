@@ -1,17 +1,15 @@
 {
-    "name": "INVOZA One POS",
-    "short_name": "INVOZA POS",
-    "description": "Offline-First Point of Sale System",
-    "start_url": "/sales/create",
-    "display": "standalone",
-    "background_color": "#f8fafc",
-    "theme_color": "#0ea5e9",
-    "icons": [
-        {
-            "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ]
+  "name": "INVOZA One",
+  "short_name": "INVOZA",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

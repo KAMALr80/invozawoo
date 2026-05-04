@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Agent Approval')
+@section('page-title', 'Agent Approval')
 
 @section('content')
     <style>

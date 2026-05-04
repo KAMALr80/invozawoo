@@ -118,6 +118,126 @@
             word-break: break-word;
         }
 
+        .offline-badge {
+            background: #fffbeb;
+            color: #d97706;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #fde68a;
+            margin-top: 10px;
+        }
+
+        /* Success Modal Styles */
+        .success-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .success-card {
+            background: white;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: modalScaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes modalScaleUp {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 24px;
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .success-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+
+        .success-msg {
+            color: #64748b;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .invoice-summary {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+            border: 1px solid #f1f5f9;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .summary-item:last-child { margin-bottom: 0; }
+
+        .summary-label { color: #64748b; }
+        .summary-value { font-weight: 700; color: #1e293b; }
+
+        .success-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-success-action {
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border: none;
+            width: 100%;
+        }
+
+        .btn-print { background: #3b82f6; color: white; }
+        .btn-print:hover { background: #2563eb; transform: translateY(-2px); }
+
+        .btn-new { background: #f1f5f9; color: #475569; }
+        .btn-new:hover { background: #e2e8f0; }
+
         .header-subtitle {
             color: var(--text-muted);
             margin: 5px 0 0;
@@ -982,18 +1102,8 @@
             font-weight: 700;
             font-size: 14px;
             white-space: nowrap;
-            margin-right: 8px;
         }
 
-        .product-selling-price {
-            background: var(--success);
-            color: white;
-            padding: 6px 12px;
-            border-radius: var(--radius-md);
-            font-weight: 700;
-            font-size: 14px;
-            white-space: nowrap;
-        }
 
         .toast-notification {
             position: fixed;
@@ -1235,15 +1345,12 @@
                         <div>
                             <h1 class="header-title">Create New Invoice</h1>
                             <p class="header-subtitle">Step 1: Select customer → Step 2: Add products → Step 3: Shipping</p>
+                            <div id="pending-sync-indicator" style="display: none;" class="offline-badge">
+                                <i class="fas fa-sync fa-spin"></i> <span id="pending-count">0</span> Invoices waiting to sync...
+                            </div>
                         </div>
                     </div>
-                    <div class="header-right" style="display: flex; gap: 10px; align-items: center;">
-                        <button type="button" id="btnDownloadData" onclick="downloadOfflineData()" class="btn-quick-create" style="background: linear-gradient(135deg, var(--info) 0%, #0ea5e9 100%); color: white; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);">
-                            <i class="fas fa-cloud-download-alt"></i>
-                            <span>Download Offline Data</span>
-                        </button>
-
-                        <div id="clearCustomerContainer" style="display: none;">
+                    <div id="clearCustomerContainer" style="display: none;">
                         <button type="button" onclick="InvoiceManager.clearCustomerSelection()" class="btn-clear-customer">
                             <span>✕</span> Clear Customer
                         </button>
@@ -1291,8 +1398,8 @@
                                         <input type="hidden" name="customer_id" id="customer_id">
                                         <div id="customerResults" class="search-results"></div>
                                     </div>
-                                    <button type="button" onclick="InvoiceManager.openCustomerModal()"
-                                        class="btn-add-customer"><span>+</span> Add New</button>
+                                    <a href="{{ route('customers.create', ['from' => 'sales.create']) }}"
+                                        class="btn-add-customer"><span>+</span> Add New</a>
                                 </div>
                             </div>
 
@@ -1507,6 +1614,39 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- Success Modal --}}
+    <div id="successModal" class="success-overlay" style="display: none;">
+        <div class="success-card">
+            <div class="success-icon">✓</div>
+            <h2 class="success-title">Invoice Created!</h2>
+            <p class="success-msg" id="successMsg">Invoice has been saved locally and will be synced when you're online.</p>
+            
+            <div class="invoice-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Invoice #</span>
+                    <span class="summary-value" id="res_invoice_no">---</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Customer</span>
+                    <span class="summary-value" id="res_customer">---</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Amount</span>
+                    <span class="summary-value" id="res_amount">₹0.00</span>
+                </div>
+            </div>
+
+            <div class="success-actions">
+                <button type="button" onclick="window.print()" class="btn-success-action btn-print">
+                    <i class="fas fa-print"></i> Print Invoice
+                </button>
+                <button type="button" onclick="window.location.reload()" class="btn-success-action btn-new">
+                    <i class="fas fa-plus"></i> Create New Invoice
+                </button>
             </div>
         </div>
     </div>
@@ -1956,7 +2096,27 @@
                 attachEventListeners();
                 loadCustomerFromUrl();
                 updateUIState();
+                checkPendingSync();
                 window.initAddressAutocomplete = initAddressAutocomplete;
+            }
+
+            function checkPendingSync() {
+                const invoices = DataService.getAllInvoices();
+                const pending = Object.keys(invoices).filter(t => !invoices[t].synced).length;
+                const indicator = document.getElementById('pending-sync-indicator');
+                const countEl = document.getElementById('pending-count');
+                
+                if (pending > 0) {
+                    if (indicator) indicator.style.display = 'inline-flex';
+                    if (countEl) countEl.textContent = pending;
+                    
+                    // Try to sync if online
+                    if (navigator.onLine) {
+                        DataService.syncAllPending().then(() => checkPendingSync());
+                    }
+                } else {
+                    if (indicator) indicator.style.display = 'none';
+                }
             }
 
             function attachEventListeners() {
@@ -2164,7 +2324,7 @@
                             ${imageUrl ? `<img src="${imageUrl}" alt="${escapeHTML(p.name)}" class="product-image" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
                             <div class="product-image-placeholder" style="${imageUrl ? 'display:none;' : 'display:flex;'}">${escapeHTML(p.name?.charAt(0) || 'P')}</div>
                             <div style="flex:1; min-width:150px;"><div style="font-weight:600; color:#374151;">${escapeHTML(p.name)}</div><div style="font-size:12px; color:#64748b;">Code: ${escapeHTML(p.product_code || 'N/A')}</div></div>
-                            <div style="display:flex; gap:8px;"><div class="product-mrp-price">MRP: ₹${mrp.toFixed(2)}</div><div class="product-selling-price">Sell: ₹${sellingPrice.toFixed(2)}</div></div>
+                            <div style="display:flex; gap:8px;"><div class="product-mrp-price">MRP: ₹${mrp.toFixed(2)}</div></div>
                         </div>
                     `;
                     item.onmouseover = () => item.style.background = '#f8fafc';
@@ -2449,14 +2609,28 @@
                 // Save to LocalStorage
                 DataService.saveInvoice(invoiceData);
 
-                showToast('Invoice saved locally! Redirecting...', 'success');
-                
-                // Redirect to show page (which will load from localStorage if not in DB)
-                setTimeout(() => {
-                    window.location.href = `/sales/${state.invoice_token}`;
-                }, 1000);
+                if (navigator.onLine) {
+                    showToast('Invoice saved! Syncing...', 'success');
+                    DataService.syncInvoice(invoiceData.invoice_token)
+                        .then(res => {
+                            window.location.href = `/sales/${res.sale_id}`;
+                        })
+                        .catch(err => {
+                            console.error('Online Sync Failed:', err);
+                            showOfflineSuccess(invoiceData);
+                        });
+                } else {
+                    showOfflineSuccess(invoiceData);
+                }
 
                 return false;
+            }
+
+            function showOfflineSuccess(data) {
+                showToast('Invoice saved locally! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/sales';
+                }, 1500);
             }
 
             function openCustomerModal() {
@@ -2650,35 +2824,5 @@
             InvoiceManager.init();
         });
         window.InvoiceManager = InvoiceManager;
-        // Download Offline Data Logic
-        async function downloadOfflineData() {
-            const btn = document.getElementById('btnDownloadData');
-            const originalHtml = btn.innerHTML;
-            
-            if (!navigator.onLine) {
-                InvoiceManager.showToast('You are offline. Cannot download data.', 'error');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Downloading...</span>';
-            btn.style.opacity = '0.7';
-
-            try {
-                await DataService.downloadData();
-                InvoiceManager.showToast('Offline data updated successfully!', 'success');
-                
-                // Refresh local products/customers in memory
-                InvoiceManager.products = DataService.getProducts();
-                InvoiceManager.customers = DataService.getCustomers();
-                
-            } catch (error) {
-                InvoiceManager.showToast('Failed to download data: ' + error.message, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-                btn.style.opacity = '1';
-            }
-        }
     </script>
 @endsection

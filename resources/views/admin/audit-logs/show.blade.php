@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Log Details')
+@section('page-title', 'Log Details')
 
 @section('content')
 <style>

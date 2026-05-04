@@ -1322,10 +1322,8 @@
                                         <input type="hidden" name="customer_id" id="customer_id" value="{{ $sale->customer_id }}">
                                         <div id="customerResults" class="search-results"></div>
                                     </div>
-                                    <button type="button" onclick="InvoiceManager.openCustomerModal()" class="btn-add-customer">
-                                        <span>+</span>
-                                        Add New
-                                    </button>
+                                    <a href="{{ route('customers.create', ['from' => 'sales.edit', 'sale_id' => $sale->id]) }}"
+                                        class="btn-add-customer"><span>+</span> Add New</a>
                                 </div>
                             </div>
 
@@ -1615,10 +1613,51 @@
                     .replace(/'/g, '&#039;');
             }
 
+            function loadCustomerFromUrl() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const customerId = urlParams.get('customer_id');
+                const customerName = urlParams.get('customer_name');
+                if (!customerId || !customerName) return;
+
+                const customer = {
+                    id: customerId,
+                    name: decodeURIComponent(customerName),
+                    mobile: 'Fetching...',
+                    email: 'Fetching...'
+                };
+                selectCustomer(customer);
+                showToast('Loading customer details...', 'info');
+
+                fetch(`/customers/${customerId}/details`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.customer) {
+                            if (elements.selectedCustomerMobileText) elements.selectedCustomerMobileText
+                                .textContent = data.customer.mobile || 'Not provided';
+                            if (elements.selectedCustomerEmailText) elements.selectedCustomerEmailText
+                                .textContent = data.customer.email || 'Not provided';
+                            if (elements.customerSearch) {
+                                elements.customerSearch.value = data.customer.name;
+                            }
+                            showToast(`Customer "${data.customer.name}" loaded successfully`, 'success');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Failed to load customer details', 'error');
+                    });
+            }
+
             // ========== INITIALIZATION ==========
             function init() {
                 attachEventListeners();
                 updateUIState();
+                loadCustomerFromUrl();
 
                 // Enable barcode scanner if customer is selected
                 if (state.isCustomerSelected) {
