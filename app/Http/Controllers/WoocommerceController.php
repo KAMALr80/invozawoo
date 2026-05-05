@@ -139,6 +139,43 @@ class WoocommerceController extends Controller
         ]);
     }
 
+    /**
+     * Update WooCommerce settings
+     */
+    public function updateSettings(Request $request)
+    {
+        try {
+            $request->validate([
+                'store_url' => 'required|url',
+                'consumer_key' => 'required',
+                'consumer_secret' => 'required',
+            ]);
+
+            $data = [
+                'store_url' => rtrim($request->store_url, '/'),
+                'consumer_key' => $request->consumer_key,
+                'consumer_secret' => $request->consumer_secret,
+                'updated_at' => now(),
+            ];
+
+            $exists = DB::table('woocommerce_settings')->first();
+
+            if ($exists) {
+                DB::table('woocommerce_settings')
+                    ->where('id', $exists->id)
+                    ->update($data);
+            } else {
+                $data['created_at'] = now();
+                DB::table('woocommerce_settings')->insert($data);
+            }
+
+            return redirect()->back()->with('success', 'Settings updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to update settings: ' . $e->getMessage());
+        }
+    }
+
+
     public function toggleAutoSync(Request $request)
     {
         $settings = DB::table('woocommerce_settings')->first();

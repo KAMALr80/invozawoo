@@ -80,12 +80,12 @@ const DataService = (function() {
         },
 
         /**
-         * Mark an invoice as successfully synced
+         * Remove an invoice from local storage after successful sync
          */
-        markSynced: function(token) {
+        removeInvoice: function(token) {
             const invoices = get(STORAGE_KEYS.INVOICES) || {};
             if (invoices[token]) {
-                invoices[token].synced = true;
+                delete invoices[token];
                 save(STORAGE_KEYS.INVOICES, invoices);
             }
         },
@@ -131,7 +131,7 @@ const DataService = (function() {
                     throw new Error(result.message || 'Sync failed');
                 }
 
-                this.markSynced(token);
+                this.removeInvoice(token);
                 return result;
 
             } catch (error) {

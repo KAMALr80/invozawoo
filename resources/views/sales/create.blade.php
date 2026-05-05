@@ -1398,7 +1398,7 @@
                                         <input type="hidden" name="customer_id" id="customer_id">
                                         <div id="customerResults" class="search-results"></div>
                                     </div>
-                                    <a href="{{ route('customers.create', ['from' => 'sales.create']) }}"
+                                    <a href="{{ route('customers.create', ['from' => 'sales.create', 'no_sidebar' => request('no_sidebar')]) }}"
                                         class="btn-add-customer"><span>+</span> Add New</a>
                                 </div>
                             </div>
@@ -2078,7 +2078,20 @@
                     });
             }
 
+            function generateUUID() {
+                if (window.crypto && window.crypto.randomUUID) {
+                    return 'idx_' + window.crypto.randomUUID();
+                }
+                // Fallback for older browsers
+                return 'idx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 12) + '_' + Math.random().toString(36).substr(2, 12);
+            }
+
             function init() {
+                // Always generate a fresh token for this session to prevent offline token reuse
+                state.invoice_token = generateUUID();
+                const tokenInput = document.querySelector('input[name="invoice_token"]');
+                if (tokenInput) tokenInput.value = state.invoice_token;
+
                 // Bootstrap local data
                 DataService.bootstrap(state.products, state.customers);
                 
@@ -2824,5 +2837,25 @@
             InvoiceManager.init();
         });
         window.InvoiceManager = InvoiceManager;
+    </script>
+    {{-- ================= FORCE CACHE POS SCRIPT ================= --}}
+    <script>
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            window.addEventListener('load', function() {
+                // Tell SW to cache this page explicitly
+                if (navigator.onLine) {
+                    console.log('POS: Requesting manual cache update...');
+                    fetch(window.location.href).then(response => {
+                        if (response.ok) {
+                            const cacheName = 'invoza-v14'; // Keep in sync with sw.js
+                            caches.open(cacheName).then(cache => {
+                                cache.put('/sales/create', response);
+                                console.log('POS: Manual cache update successful!');
+                            });
+                        }
+                    }).catch(err => console.warn('POS: Manual cache failed', err));
+                }
+            });
+        }
     </script>
 @endsection

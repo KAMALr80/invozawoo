@@ -888,10 +888,14 @@ private function createShipmentFromSale($sale, $request)
     public function show($id)
     {
         try {
-            // Try finding by primary ID or invoice_token
-            $sale = Sale::where('id', $id)
-                ->orWhere('invoice_token', $id)
-                ->with([
+            // Strictly handle ID vs Token to prevent MySQL string-to-int conversion issues
+            if (is_numeric($id)) {
+                $sale = Sale::where('id', $id);
+            } else {
+                $sale = Sale::where('invoice_token', $id);
+            }
+
+            $sale = $sale->with([
                     'customer',
                     'items.product',
                     'payments',
@@ -971,7 +975,13 @@ private function createShipmentFromSale($sale, $request)
             $shipmentStatus = ['exists' => false];
         }
 
-        return view('sales.show', compact('sale', 'emiData', 'paymentSummary', 'shipmentStatus'));
+        return view('sales.show', [
+            'sale' => $sale,
+            'emiData' => $emiData,
+            'paymentSummary' => $paymentSummary,
+            'shipmentStatus' => $shipmentStatus,
+            'local_token' => is_numeric($id) ? null : $id
+        ]);
     }
 
     public function view(Sale $sale)

@@ -1282,12 +1282,16 @@
                 </div>
             @endif
 
-            <!-- Search Bar -->
-            <div class="search-box">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="searchInput" class="search-input"
-                    placeholder="Search by invoice number, customer name, amount...">
-                <button class="search-clear" id="searchClear" title="Clear search">×</button>
+            <div class="search-box" style="display: flex; gap: 10px; align-items: center;">
+                <div style="flex: 1; position: relative; display: flex; align-items: center;">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input"
+                        placeholder="Search by invoice number, customer name, amount...">
+                    <button class="search-clear" id="searchClear" title="Clear search">×</button>
+                </div>
+                <button onclick="clearOfflineData()" class="btn-secondary" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; white-space: nowrap; height: 45px; padding: 0 15px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <span>🗑️</span> Clean Offline Drafts
+                </button>
             </div>
 
             <!-- Advanced Filters -->
@@ -1539,7 +1543,7 @@
                                             Start by creating your first sales invoice. All your sales transactions will
                                             appear here for tracking and analysis.
                                         </div>
-                                        <a href="{{ route('sales.create') }}" class="btn-primary" style="display: inline-flex;">
+                                        <a href="{{ route('sales.create', ['no_sidebar' => 1]) }}" target="_blank" class="btn-primary" style="display: inline-flex;">
                                             <span>+</span>
                                             Create Your First Sale
                                         </a>
@@ -2246,5 +2250,15 @@
         // Initialize
         updateBulkActions();
     });
+
+    function clearOfflineData() {
+        if (confirm('Are you sure you want to clear all local offline drafts? This will remove all unsynced data from this browser.')) {
+            if (typeof DataService !== 'undefined') {
+                localStorage.removeItem('pos_offline_invoices');
+                showToast('✅ Offline drafts cleared!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+    }
 </script>
 @endsection

@@ -837,7 +837,7 @@
                                             <div class="empty-icon">📭</div>
                                             <div class="empty-title">No sales found</div>
                                             <div class="empty-text">Try adjusting your filters or create a new sale</div>
-                                            <a href="{{ route('sales.create') }}" class="btn btn-primary"
+                                            <a href="{{ route('sales.create', ['no_sidebar' => 1]) }}" target="_blank" class="btn btn-primary"
                                                 style="margin-top: 1rem;">
                                                 + Create New Sale
                                             </a>

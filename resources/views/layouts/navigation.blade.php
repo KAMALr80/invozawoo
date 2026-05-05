@@ -354,7 +354,7 @@
         </button>
         
         <div class="page-title">
-            <span>@php $navTitle = trim($__env->yieldContent('page-title')); @endphp {{ $navTitle ?: 'Dashboard' }}</span>
+            <span>@yield('page-title', 'Dashboard')</span>
             <span id="connectivity-status" class="status-badge-offline" style="display: none;">
                 <i class="fas fa-wifi-slash"></i> Offline
             </span>
@@ -368,7 +368,7 @@
 
         <div class="quick-create-actions">
             @if (auth()->user()->hasPermission('view_sales'))
-                <a href="{{ route('sales.create') }}" class="btn-quick-create btn-qc-sales">
+                <a href="{{ route('sales.create', ['no_sidebar' => 1]) }}" target="_blank" class="btn-quick-create btn-qc-sales">
                     <i class="fas fa-cash-register"></i> <span>POS</span>
                 </a>
             @endif

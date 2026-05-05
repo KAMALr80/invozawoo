@@ -780,8 +780,8 @@
                                     <div class="empty-title">No invoices found</div>
                                     <div class="empty-text">Create a new invoice for this customer</div>
                                     @if(auth()->user()->hasPermission('create_sales'))
-                                        <a href="{{ route('sales.create') }}?customer_id={{ $customer->id }}&customer_name={{ urlencode($customer->name) }}"
-                                            class="create-btn">
+                                        <a href="{{ route('sales.create', ['customer_id' => $customer->id, 'customer_name' => urlencode($customer->name), 'no_sidebar' => 1]) }}"
+                                            target="_blank" class="create-btn">
                                             ➕ Create New Invoice
                                         </a>
                                     @endif

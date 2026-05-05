@@ -215,6 +215,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/sync-single-product', [WoocommerceController::class, 'syncSingleProduct'])->name('sync-single-product');
         Route::post('/sync-orders', [WoocommerceController::class, 'syncOrders'])->name('sync-orders');
         Route::post('/sync-customers', [WoocommerceController::class, 'syncCustomers'])->name('sync-customers');
+        Route::post('/test-connection', [WoocommerceController::class, 'testConnection'])->name('test-connection');
+        Route::get('/sync-stats', [WoocommerceController::class, 'getSyncStats'])->name('sync-stats');
+        Route::post('/toggle-auto-sync', [WoocommerceController::class, 'toggleAutoSync'])->name('toggle-auto-sync');
     });
 
 
@@ -863,21 +866,3 @@ Route::middleware(['web'])->group(function () {
     Route::get('/2fa/recovery', [TwoFactorController::class, 'showRecovery'])->name('2fa.recovery');
     Route::post('/2fa/recovery', [TwoFactorController::class, 'verifyRecovery'])->name('2fa.recovery.verify');
 });
-
-
-
-// use App\Http\Controllers\WoocommerceController;
-
-// WooCommerce Routes
-Route::prefix('woocommerce')->name('woocommerce.')->group(function () {
-    Route::get('/', [WoocommerceController::class, 'index'])->name('index');
-    Route::post('/update-settings', [WoocommerceController::class, 'updateSettings'])->name('update-settings');
-    Route::post('/sync-products', [WoocommerceController::class, 'syncProducts'])->name('sync-products');
-    Route::post('/sync-orders', [WoocommerceController::class, 'syncOrders'])->name('sync-orders');
-    Route::post('/sync-customers', [WoocommerceController::class, 'syncCustomers'])->name('sync-customers');
-    Route::post('/sync-single-product', [WoocommerceController::class, 'syncSingleProduct'])->name('sync-single-product');
-});
-
-Route::post('/woocommerce/test-connection', [WoocommerceController::class, 'testConnection'])->name('woocommerce.test-connection');
-Route::get('/woocommerce/sync-stats', [WoocommerceController::class, 'getSyncStats'])->name('woocommerce.sync-stats');
-Route::post('/woocommerce/toggle-auto-sync', [WoocommerceController::class, 'toggleAutoSync'])->name('woocommerce.toggle-auto-sync');

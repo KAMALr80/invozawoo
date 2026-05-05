@@ -674,6 +674,9 @@
                 @if(request('sale_id'))
                     <input type="hidden" name="sale_id" value="{{ request('sale_id') }}">
                 @endif
+                @if(request('no_sidebar'))
+                    <input type="hidden" name="no_sidebar" value="{{ request('no_sidebar') }}">
+                @endif
 
                 <!-- Full Name -->
                 <div class="form-group">

@@ -1583,7 +1583,7 @@
                                 {{ strtoupper($sale->payment_status) }}
                             </div>
                             <div class="header-actions">
-                                @if(isset($local_token))
+                                @if(isset($local_token) && !$sale->id)
                                     <button id="syncBtn" class="header-btn" onclick="handleSync()" title="Sync this invoice to server" style="background: #10b981; color: white;">
                                         🔄 Sync to Server
                                     </button>
@@ -2308,8 +2308,8 @@
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
         const localToken = '{{ $local_token ?? "" }}';
 
-        // Load local data if this is an offline invoice
-        if (localToken) {
+        // Load local data if this is an offline invoice and not yet synced
+        if (localToken && !'{{ $sale->id }}') {
             const localData = DataService.getInvoice(localToken);
             if (localData) {
                 // Update UI with local data

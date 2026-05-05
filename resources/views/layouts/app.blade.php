@@ -59,6 +59,15 @@
             --header-height: 80px;
         }
 
+        @if(request('no_sidebar'))
+        :root {
+            --sidebar-width: 0px !important;
+        }
+        #sidebar, .sidebar-overlay, .menu-toggle {
+            display: none !important;
+        }
+        @endif
+
         .status-badge-offline {
             background: #fee2e2;
             color: #ef4444;
@@ -1527,7 +1536,7 @@
                         <a href="{{ route('sales.index') }}" class="dropdown-item">
                             <i class="fas fa-list-ul"></i> All Sales
                         </a>
-                        <a href="{{ route('sales.create') }}" class="dropdown-item">
+                        <a href="{{ route('sales.create', ['no_sidebar' => 1]) }}" target="_blank" class="dropdown-item">
                             <i class="fas fa-cash-register"></i> New POS Sale
                         </a>
                         <a href="{{ route('sales.index') }}?status=pending" class="dropdown-item">

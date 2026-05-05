@@ -89,7 +89,8 @@ class CustomerController extends Controller
             return redirect()
                 ->route('sales.create', [
                     'customer_id' => $customer->id,
-                    'customer_name' => $customer->name
+                    'customer_name' => $customer->name,
+                    'no_sidebar' => $request->no_sidebar
                 ])
                 ->with('success', 'Customer added and selected successfully');
         }
@@ -99,7 +100,8 @@ class CustomerController extends Controller
                 ->route('sales.edit', [
                     'sale' => $request->sale_id,
                     'customer_id' => $customer->id,
-                    'customer_name' => $customer->name
+                    'customer_name' => $customer->name,
+                    'no_sidebar' => $request->no_sidebar
                 ])
                 ->with('success', 'Customer added and selected successfully');
         }
