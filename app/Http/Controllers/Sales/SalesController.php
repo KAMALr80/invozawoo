@@ -22,6 +22,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use App\Models\CreditMemo;
 
 class SalesController extends Controller
 {
@@ -494,42 +495,61 @@ class SalesController extends Controller
         }
     }
 
-    public function index(Request $request)
+     public function index(Request $request)
     {
         try {
-            $query = Sale::with(['customer', 'items', 'shipments']);
 
+            $query = Sale::with([
+                'customer',
+                'items',
+                'shipments'
+            ]);
+
+            // Customer Filter
             if ($request->customer_id) {
                 $query->where('customer_id', $request->customer_id);
             }
 
+            // Payment Status Filter
             if ($request->status && $request->status != 'all') {
                 $query->where('payment_status', $request->status);
             }
 
+            // Shipping Filter
             if ($request->has('requires_shipping') && $request->requires_shipping !== '') {
                 $query->where('requires_shipping', $request->requires_shipping);
             }
 
+            // Search
             if ($request->search) {
-                $query->where(function ($q) use ($request) {
-                    $q->where('invoice_no', 'LIKE', "%{$request->search}%")
-                        ->orWhereHas('customer', function ($cq) use ($request) {
-                            $cq->where('name', 'LIKE', "%{$request->search}%")
-                                ->orWhere('mobile', 'LIKE', "%{$request->search}%");
+
+                $search = $request->search;
+
+                $query->where(function ($q) use ($search) {
+
+                    $q->where('invoice_no', 'LIKE', "%{$search}%")
+
+                        ->orWhereHas('customer', function ($cq) use ($search) {
+
+                            $cq->where('name', 'LIKE', "%{$search}%")
+                               ->orWhere('mobile', 'LIKE', "%{$search}%");
                         });
                 });
             }
 
+            // Date Filters
             if ($request->from_date) {
                 $query->whereDate('sale_date', '>=', $request->from_date);
             }
+
             if ($request->to_date) {
                 $query->whereDate('sale_date', '<=', $request->to_date);
             }
 
-            $sales = $query->latest()->paginate(15)->withQueryString();
+            // Sales Data
+            $sales = $query->latest()->paginate(15);
 
+            // Stats
             $stats = [
                 'total' => Sale::count(),
                 'paid' => Sale::where('payment_status', 'paid')->count(),
@@ -538,38 +558,49 @@ class SalesController extends Controller
                 'emi' => Sale::where('payment_status', 'emi')->count(),
                 'shipping_required' => Sale::where('requires_shipping', true)->count(),
                 'shipped' => Sale::whereHas('shipments')->count(),
-                'total_returns' => \App\Models\CreditMemo::sum('refund_amount') ?? 0,
+                'total_returns' => CreditMemo::sum('refund_amount') ?? 0,
                 'total_revenue' => Sale::sum('grand_total') ?? 0,
             ];
 
+            // Customers
             $customers = Customer::orderBy('name')->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sales fetched successfully',
+                'data' => [
+                    'sales' => $sales,
+                    'stats' => $stats,
+                    'customers' => $customers,
+                ]
+            ]);
+
         } catch (\Throwable $e) {
-            Log::warning('Sales Index: Database offline. Returning empty results.');
-            $sales = new \Illuminate\Pagination\LengthAwarePaginator(collect(), 0, 15);
-            $stats = [
-                'total' => 0, 'paid' => 0, 'partial' => 0, 'unpaid' => 0, 
-                'emi' => 0, 'shipping_required' => 0, 'shipped' => 0,
-                'total_returns' => 0,
-                'total_revenue' => 0
-            ];
-            $customers = collect();
+
+            Log::error('Sales API Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return view('sales.index', compact('sales', 'stats', 'request', 'customers'));
     }
-
+  
     public function create()
     {
         try {
-            $customers = Customer::orderBy('name')->get();
-            $products  = Product::where('quantity', '>', 0)->orderBy('name')->get();
+            $customers  = Customer::orderBy('name')->get();
+            $products   = Product::where('quantity', '>', 0)->orderBy('name')->get();
+            $categories = Product::select('category')->distinct()->whereNotNull('category')->orderBy('category')->get();
         } catch (\Throwable $e) {
-            $customers = collect();
-            $products = collect();
+            $customers  = collect();
+            $products   = collect();
+            $categories = collect();
         }
         $invoice_token = uniqid() . '_' . time();
 
-        return view('sales.create', compact('customers', 'products', 'invoice_token'));
+        return view('sales.create', compact('customers', 'products', 'categories', 'invoice_token'));
     }
 
 public function store(Request $request)
@@ -928,7 +959,7 @@ private function createShipmentFromSale($sale, $request)
             ]);
             $dummySale->created_at = now();
             // Set dummy relations
-            $dummySale->setRelation('customer', new \App\Models\Customer(['name' => 'Offline Customer']));
+            $dummySale->setRelation('customer', new Customer(['name' => 'Offline Customer']));
             $dummySale->setRelation('items', collect());
             $dummySale->setRelation('payments', collect());
             $dummySale->setRelation('shipments', collect());
@@ -1649,7 +1680,7 @@ private function createShipmentFromSale($sale, $request)
                 // 3. Create Sale Items & Update Stock
                 if (isset($data['items']) && is_array($data['items'])) {
                     foreach ($data['items'] as $itemData) {
-                        $product = \App\Models\Product::find($itemData['product_id']);
+                        $product = Product::find($itemData['product_id']);
                         
                         $sale->items()->create([
                             'product_id' => $itemData['product_id'],

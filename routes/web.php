@@ -866,3 +866,6 @@ Route::middleware(['web'])->group(function () {
     Route::get('/2fa/recovery', [TwoFactorController::class, 'showRecovery'])->name('2fa.recovery');
     Route::post('/2fa/recovery', [TwoFactorController::class, 'verifyRecovery'])->name('2fa.recovery.verify');
 });
+
+
+Route::get('/sales-data', [\App\Http\Controllers\Sales\SalesController::class, 'index']);

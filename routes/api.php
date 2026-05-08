@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\AgentLocationController;
 use App\Http\Controllers\Api\ConfigController;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Customers\CustomerController;
+use App\Http\Controllers\Sales\SalesController;
+
 
 
 /*
@@ -39,6 +41,8 @@ Route::middleware('api')->prefix('v1')->group(function () {
         ]);
     });
 });
+
+
 
 // ============================================================
 // CONFIGURATION API (Maps & Services Configuration)
@@ -382,6 +386,11 @@ Route::prefix('health')->name('api.health.')->group(function () {
     })->name('detailed');
 });
 
+
+// SALES API
+
+Route::get('/sales-data', [SalesController::class, 'index']);
+
 // ============================================================
 // FALLBACK ROUTE FOR 404
 // ============================================================
@@ -427,3 +436,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Public tracking route (no auth)
 Route::get('/public/track/{shipmentId}', [AgentLocationController::class, 'getAgentLocation']);
+
+
