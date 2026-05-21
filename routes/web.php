@@ -869,3 +869,8 @@ Route::middleware(['web'])->group(function () {
 
 
 Route::get('/sales-data', [\App\Http\Controllers\Sales\SalesController::class, 'index']);
+
+Route::get(
+    '/inventory-data',
+    [InventoryController::class, 'inventoryApi']
+);

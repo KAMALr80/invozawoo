@@ -58,6 +58,110 @@ class InventoryController extends Controller
         ]);
     }
 
+    public function inventoryApi(Request $request)
+{
+    try {
+
+        $query = Product::query();
+
+        // Search
+        if ($request->search) {
+
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('sku', 'LIKE', "%{$search}%")
+                  ->orWhere('category', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Category Filter
+        if ($request->category) {
+
+            $query->where(
+                'category',
+                $request->category
+            );
+        }
+
+        // Low Stock Filter
+        if ($request->low_stock == 1) {
+
+            $query->where(
+                'quantity',
+                '<=',
+                10
+            );
+        }
+
+        // Products
+        $products = $query
+            ->latest()
+            ->paginate(20);
+
+        // Statistics
+        $stats = [
+
+            'total_products' => Product::count(),
+
+            'low_stock_count' => Product::where(
+                'quantity',
+                '<=',
+                10
+            )->count(),
+
+            'total_inventory_value' => Product::sum(
+                DB::raw('price * quantity')
+            ),
+
+            'total_categories' => Product::distinct()
+                ->count('category'),
+
+            'out_of_stock' => Product::where(
+                'quantity',
+                '<=',
+                0
+            )->count(),
+        ];
+
+        // Categories
+        $categories = Product::distinct()
+            ->pluck('category')
+            ->sort()
+            ->values();
+
+        return response()->json([
+
+            'success' => true,
+
+            'message' => 'Inventory fetched successfully',
+
+            'data' => [
+
+                'products' => $products,
+
+                'stats' => $stats,
+
+                'categories' => $categories,
+            ]
+
+        ], 200);
+
+    } catch (\Throwable $e) {
+
+        return response()->json([
+
+            'success' => false,
+
+            'message' => 'Something went wrong',
+
+            'error' => $e->getMessage()
+
+        ], 500);
+    }
+}
     public function index(Request $request)
     {
         // DataTable के लिए ALL products get करें
